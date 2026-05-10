@@ -37,3 +37,8 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 - **Vendor data-processing agreements** — confirm Vertex / Gemini / Korean LLM vendor's actual data-processing terms (not just `do_not_train` flags). Codex flagged this as hand-waved in the eng review. Trigger: pre-launch (week 5-6), have legal counsel sign off on specific terms with each vendor.
 - **Backup / disaster recovery** — Supabase managed backup is implicit; document RPO/RTO + restore-test once per quarter. Trigger: post-revenue.
 - **Plan B embedding path** (Gemini-describe-then-text-embed) — if Vertex multimodal embeddings produce poor cosine signal in production at multi-academy scale, fall back to Gemini description + text embedding. Trigger: cosine-confidence drops below 0.7 average across 100+ evaluations.
+
+## Deferred from T14 review (2026-05-10)
+
+- [ ] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string.
+- [ ] **Race condition**: No `UNIQUE(student_id, evaluation_date)` constraint on `evaluations` table. Double-submit during start-evaluation creates duplicate rows. Add migration 0005 + `.onConflictDoNothing()` in `startEvaluation`.
