@@ -7,6 +7,7 @@ import {
 	getStudent,
 } from "@/lib/students/queries";
 import { cn } from "@/lib/utils";
+import { ArchiveConfirm } from "../components/archive-confirm";
 import { StartEvaluationButton } from "./start-evaluation-button";
 
 export default async function StudentDetailPage({
@@ -65,7 +66,7 @@ export default async function StudentDetailPage({
 					>
 						학생 정보 수정
 					</Link>
-					{/* archive button mounted in T13 */}
+					<ArchiveConfirm studentId={id} />
 				</div>
 			)}
 		</main>
