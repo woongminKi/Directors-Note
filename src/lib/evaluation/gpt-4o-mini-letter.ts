@@ -1,3 +1,4 @@
+import { validateLetter } from "@/lib/evaluations/validate-letter";
 import { SYSTEM_PROMPT_V2 } from "./prompts/parent-letter-v2";
 import type {
 	AIAnalysis,
@@ -6,7 +7,6 @@ import type {
 	LetterGenerationService,
 	ReferenceMatch,
 } from "./types";
-import { validateLetter } from "@/lib/korean-letter";
 
 interface ChatCompletionResponse {
 	choices?: Array<{ message?: { content?: string } }>;
@@ -29,38 +29,37 @@ export class GPT4oMiniLetterService implements LetterGenerationService {
 			const userPrompt = this.buildUserPrompt(input, lastReason);
 			const text = await this.callOpenAI(userPrompt);
 			const v = validateLetter(text);
-			if (v.ok) return v.text;
-			lastReason = v.reason;
+			if (v.ok) return text.trim();
+			lastReason = v.error;
 			if (attempt === 2) {
-				throw new Error(`letter validation failed twice: ${v.reason}`);
+				throw new Error(`letter validation failed twice: ${v.error}`);
 			}
 		}
 		throw new Error("unreachable");
 	}
 
 	private async callOpenAI(userPrompt: string): Promise<string> {
-		const response = await fetch(
-			"https://api.openai.com/v1/chat/completions",
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${this.apiKey}`,
-				},
-				body: JSON.stringify({
-					model: this.model,
-					messages: [
-						{ role: "system", content: SYSTEM_PROMPT_V2 },
-						{ role: "user", content: userPrompt },
-					],
-					max_tokens: 600,
-					temperature: 0.7,
-				}),
+		const response = await fetch("https://api.openai.com/v1/chat/completions", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${this.apiKey}`,
 			},
-		);
+			body: JSON.stringify({
+				model: this.model,
+				messages: [
+					{ role: "system", content: SYSTEM_PROMPT_V2 },
+					{ role: "user", content: userPrompt },
+				],
+				max_tokens: 600,
+				temperature: 0.7,
+			}),
+		});
 
 		if (!response.ok) {
-			throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+			throw new Error(
+				`OpenAI API error: ${response.status} ${response.statusText}`,
+			);
 		}
 
 		const data = (await response.json()) as ChatCompletionResponse;
@@ -152,5 +151,8 @@ ${notes.map((n) => `- ${n}`).join("\n")}
 }
 
 export function _testHelpers() {
-	return { validateAxis: (a: AxisScores) => a, sample: null as ReferenceMatch | null };
+	return {
+		validateAxis: (a: AxisScores) => a,
+		sample: null as ReferenceMatch | null,
+	};
 }
