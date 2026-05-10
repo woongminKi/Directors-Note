@@ -38,6 +38,10 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 - **Backup / disaster recovery** — Supabase managed backup is implicit; document RPO/RTO + restore-test once per quarter. Trigger: post-revenue.
 - **Plan B embedding path** (Gemini-describe-then-text-embed) — if Vertex multimodal embeddings produce poor cosine signal in production at multi-academy scale, fall back to Gemini description + text embedding. Trigger: cosine-confidence drops below 0.7 average across 100+ evaluations.
 
+## Deferred from T30 (2026-05-10)
+
+- [ ] **Kakao OAuth vs pre-invited users**: When a coach is invited via `inviteUserByEmail`, Supabase creates an `auth.users` row with a magic-link identity. If the coach later signs in via Kakao OAuth, Supabase may create a *different* `auth.users.id` for the Kakao identity provider — causing the `/auth/callback` `id` mismatch check to reject them. Test end-to-end: invite a user via T30 invite form, have them log in with Kakao OAuth, and verify they land on `/students` without error. If IDs diverge, consider linking identities via `supabase.auth.admin.linkIdentity` or using the email match path in `/auth/callback` instead of ID match.
+
 ## Deferred from T14 review (2026-05-10)
 
 - [ ] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string.
