@@ -1,0 +1,97 @@
+"use server";
+import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireRole } from "@/lib/auth/require-role";
+import { db } from "@/lib/db/client";
+import { students } from "@/lib/db/schema";
+import {
+	type StudentFormInput,
+	studentFormSchema,
+} from "@/lib/students/schema";
+
+export type ActionResult<T = void> =
+	| { ok: true; data?: T }
+	| { ok: false; error: string };
+
+export async function createStudent(
+	input: StudentFormInput,
+): Promise<ActionResult<{ id: string }>> {
+	const { academyId } = await requireRole(["owner", "admin"]);
+	const parsed = studentFormSchema.safeParse(input);
+	if (!parsed.success)
+		return { ok: false, error: parsed.error.issues[0]?.message ?? "검증 실패" };
+
+	const [row] = await db
+		.insert(students)
+		.values({
+			academyId,
+			name: parsed.data.name,
+			year: parsed.data.year ?? null,
+			parentConsentOnFileAt: parsed.data.parentConsentOnFile
+				? new Date()
+				: null,
+		})
+		.returning({ id: students.id });
+
+	revalidatePath("/students");
+	return { ok: true, data: { id: row.id } };
+}
+
+export async function updateStudent(
+	id: string,
+	input: StudentFormInput,
+): Promise<ActionResult> {
+	// Consent toggle requires owner/admin; other field edits allowed for any auth'd user in same academy
+	const { academyId } =
+		input.parentConsentOnFile !== undefined
+			? await requireRole(["owner", "admin"])
+			: await requireAuth();
+
+	const parsed = studentFormSchema.safeParse(input);
+	if (!parsed.success)
+		return { ok: false, error: parsed.error.issues[0]?.message ?? "검증 실패" };
+
+	const existing = await db.query.students.findFirst({
+		where: and(eq(students.id, id), eq(students.academyId, academyId)),
+	});
+	if (!existing) return { ok: false, error: "학생을 찾을 수 없습니다" };
+
+	await db
+		.update(students)
+		.set({
+			name: parsed.data.name,
+			year: parsed.data.year ?? null,
+			parentConsentOnFileAt: parsed.data.parentConsentOnFile
+				? (existing.parentConsentOnFileAt ?? new Date())
+				: null,
+			updatedAt: new Date(),
+		})
+		.where(eq(students.id, id));
+
+	revalidatePath("/students");
+	revalidatePath(`/students/${id}`);
+	return { ok: true };
+}
+
+export async function archiveStudent(id: string): Promise<ActionResult> {
+	const { academyId } = await requireRole(["owner", "admin"]);
+
+	const existing = await db.query.students.findFirst({
+		where: and(eq(students.id, id), eq(students.academyId, academyId)),
+	});
+	if (!existing) return { ok: false, error: "학생을 찾을 수 없습니다" };
+
+	await db
+		.update(students)
+		.set({
+			name: `STUDENT_DELETED_${id}`,
+			parentConsentArtifactUrl: null,
+			softDeletedAt: new Date(),
+			updatedAt: new Date(),
+		})
+		.where(eq(students.id, id));
+
+	revalidatePath("/students");
+	return { ok: true };
+}
