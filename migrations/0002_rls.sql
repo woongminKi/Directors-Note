@@ -223,7 +223,14 @@ SET search_path = public, extensions
 AS $$
 DECLARE
   v_academy uuid;
+  v_my_academy uuid;
 BEGIN
+  -- 인증 컨텍스트 검증 — auth.uid() 없으면 거부 (service_role 직접 호출 방지)
+  v_my_academy := my_academy_id();
+  IF v_my_academy IS NULL THEN
+    RAISE EXCEPTION 'forbidden: authenticated user required';
+  END IF;
+
   -- 본인 학원의 학생인지 확인
   SELECT academy_id INTO v_academy FROM students
   WHERE id = p_student_id AND soft_deleted_at IS NULL;
@@ -232,7 +239,7 @@ BEGIN
     RAISE EXCEPTION 'student not found or already deleted';
   END IF;
 
-  IF v_academy != my_academy_id() THEN
+  IF v_academy IS DISTINCT FROM v_my_academy THEN
     RAISE EXCEPTION 'forbidden: cross-academy access';
   END IF;
 
