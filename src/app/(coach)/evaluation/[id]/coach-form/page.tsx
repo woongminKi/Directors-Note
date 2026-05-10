@@ -1,3 +1,8 @@
+import { and, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { db } from "@/lib/db/client";
+import { evaluations } from "@/lib/db/schema";
 import { CoachBulletForm } from "./form";
 
 interface PageProps {
@@ -6,10 +11,19 @@ interface PageProps {
 
 export default async function CoachBulletFormPage({ params }: PageProps) {
 	const { id } = await params;
+	const { academyId } = await requireAuth();
 
-	// TODO: DB 셋업 후 evaluation/student 조회로 prefill
-	// const evaluation = await db.query.evaluations.findFirst({ where: eq(evaluations.id, id), with: { student: true } })
-	// 현재는 stub data 로 UI 검증
+	const evaluation = await db.query.evaluations.findFirst({
+		where: and(eq(evaluations.id, id), eq(evaluations.academyId, academyId)),
+		with: { student: true },
+	});
+
+	if (!evaluation) notFound();
+
+	const student = (
+		evaluation as { student?: { name: string; year: string | null } }
+	).student;
+	if (!student) notFound();
 
 	const today = new Date().toISOString().slice(0, 10);
 	const featureFlag = process.env.FEATURE_AI_VIDEO_ANALYSIS ?? "false";
@@ -17,9 +31,10 @@ export default async function CoachBulletFormPage({ params }: PageProps) {
 	return (
 		<div className="max-w-screen-sm mx-auto p-4">
 			<CoachBulletForm
-				studentId={id}
-				studentName="박지윤"
-				year="2년차"
+				evaluationId={id}
+				studentId={evaluation.studentId}
+				studentName={student.name}
+				year={student.year ?? "미지정"}
 				defaultDate={today}
 				degradeReason={featureFlag === "false" ? "feature_off" : undefined}
 			/>

@@ -1,24 +1,34 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { and, eq } from "drizzle-orm";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { db } from "@/lib/db/client";
+import { evaluations, feedbackDrafts } from "@/lib/db/schema";
+import { createLetterGenerationService } from "@/lib/evaluation/factory";
 import {
 	type CoachBulletFormInput,
 	coachBulletFormSchema,
 } from "@/lib/forms/coach-bullet-form";
-import { createLetterGenerationService } from "@/lib/evaluation/factory";
 
 export type SubmitResult =
-	| { ok: true; feedbackDraftId: string }
+	| { ok: true; feedbackDraftId: string; redirectTo: string }
 	| {
 			ok: false;
-			error: "validation" | "no_consent" | "duplicate" | "llm_failed";
+			error:
+				| "validation"
+				| "no_consent"
+				| "not_found"
+				| "duplicate"
+				| "llm_failed";
 			details?: string;
 	  };
 
 export async function submitCoachBulletEvaluation(
+	evaluationId: string,
 	input: CoachBulletFormInput,
 ): Promise<SubmitResult> {
-	// 1. 서버 검증
+	const { academyId } = await requireAuth();
+
 	const parsed = coachBulletFormSchema.safeParse(input);
 	if (!parsed.success) {
 		return {
@@ -28,14 +38,27 @@ export async function submitCoachBulletEvaluation(
 		};
 	}
 
-	// 2. 학생 부모 동의 확인 (DB 미연결 단계 — 구현은 Drizzle 셋업 후)
-	// TODO: const student = await db.query.students.findFirst({ where: eq(students.id, input.studentId) })
-	// TODO: if (!student?.parentConsentOnFileAt) return { ok: false, error: 'no_consent' }
+	const evaluation = await db.query.evaluations.findFirst({
+		where: and(
+			eq(evaluations.id, evaluationId),
+			eq(evaluations.academyId, academyId),
+		),
+		with: { student: true },
+	});
+	if (!evaluation) return { ok: false, error: "not_found" };
 
-	// 3. evaluation row INSERT (Approach-A 는 video_storage_url=NULL)
-	// TODO: const evaluation = await db.insert(evaluations).values({...}).returning()
+	const student = (
+		evaluation as {
+			student?: {
+				name: string;
+				year: string | null;
+				parentConsentOnFileAt: Date | null;
+			};
+		}
+	).student;
+	if (!student) return { ok: false, error: "not_found" };
+	if (!student.parentConsentOnFileAt) return { ok: false, error: "no_consent" };
 
-	// 4. LetterGenerationService 호출
 	let letter: string;
 	try {
 		const letterSvc = createLetterGenerationService();
@@ -43,13 +66,12 @@ export async function submitCoachBulletEvaluation(
 			type: "coach_bullets",
 			bullets: input.bullets,
 			student: {
-				studentName: "박지윤", // TODO: students 조회
-				year: input.year,
+				studentName: student.name,
+				year: student.year ?? input.year ?? "미지정",
 				evaluationDate: input.evaluationDate,
 			},
 		});
 	} catch (err) {
-		console.error("[submitCoachBulletEvaluation] LLM failed:", err);
 		return {
 			ok: false,
 			error: "llm_failed",
@@ -57,10 +79,38 @@ export async function submitCoachBulletEvaluation(
 		};
 	}
 
-	// 5. feedback_drafts INSERT
-	// TODO: const draft = await db.insert(feedbackDrafts).values({ aiDraftText: letter, status: 'draft', ... }).returning()
-	const fakeDraftId = "00000000-0000-4000-8000-000000000000"; // stub until DB
+	// Insert/update feedback_draft (1:1 with evaluation)
+	const existing = await db.query.feedbackDrafts.findFirst({
+		where: eq(feedbackDrafts.evaluationId, evaluationId),
+	});
 
-	revalidatePath(`/evaluation/${input.studentId}`);
-	return { ok: true, feedbackDraftId: fakeDraftId };
+	let draftId: string;
+	if (existing) {
+		if (existing.status === "sent") return { ok: false, error: "duplicate" };
+		await db
+			.update(feedbackDrafts)
+			.set({
+				aiDraftText: letter,
+				updatedAt: new Date(),
+			})
+			.where(eq(feedbackDrafts.id, existing.id));
+		draftId = existing.id;
+	} else {
+		const [row] = await db
+			.insert(feedbackDrafts)
+			.values({
+				academyId,
+				evaluationId,
+				aiDraftText: letter,
+				status: "draft",
+			})
+			.returning({ id: feedbackDrafts.id });
+		draftId = row.id;
+	}
+
+	return {
+		ok: true,
+		feedbackDraftId: draftId,
+		redirectTo: `/evaluation/${evaluationId}/review`,
+	};
 }

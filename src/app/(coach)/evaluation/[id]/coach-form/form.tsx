@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import {
-	type CoachBulletFormInput,
-	coachBulletFormSchema,
-} from "@/lib/forms/coach-bullet-form";
+import { DegradeBanner } from "@/components/degrade-banner";
+import { KoreanCharCounter } from "@/components/korean-char-counter";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
 	Form,
 	FormControl,
@@ -19,11 +16,15 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { KoreanCharCounter } from "@/components/korean-char-counter";
-import { DegradeBanner } from "@/components/degrade-banner";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	type CoachBulletFormInput,
+	coachBulletFormSchema,
+} from "@/lib/forms/coach-bullet-form";
 import { submitCoachBulletEvaluation } from "./actions";
 
 interface Props {
+	evaluationId: string;
 	studentId: string;
 	studentName: string;
 	year: string;
@@ -70,6 +71,7 @@ const FIELDS: Array<{
 ];
 
 export function CoachBulletForm({
+	evaluationId,
 	studentId,
 	studentName,
 	year,
@@ -99,10 +101,10 @@ export function CoachBulletForm({
 	const onSubmit = async (input: CoachBulletFormInput) => {
 		setSubmitting(true);
 		try {
-			const result = await submitCoachBulletEvaluation(input);
+			const result = await submitCoachBulletEvaluation(evaluationId, input);
 			if (result.ok) {
 				toast.success("letter 초안이 작성되었습니다");
-				router.push(`/evaluation/${result.feedbackDraftId}/review`);
+				router.push(result.redirectTo);
 			} else {
 				toast.error(errorMessage(result.error, result.details));
 			}
@@ -138,7 +140,9 @@ export function CoachBulletForm({
 							<FormItem className="bg-card border rounded-lg p-4">
 								<FormLabel className="flex items-center gap-1.5">
 									<span className="text-blue-600">◇</span> {f.label}
-									<span className="text-xs text-muted-foreground font-normal">(선택)</span>
+									<span className="text-xs text-muted-foreground font-normal">
+										(선택)
+									</span>
 								</FormLabel>
 								<FormControl>
 									<Textarea
@@ -162,7 +166,9 @@ export function CoachBulletForm({
 						<FormItem className="bg-card border rounded-lg p-4">
 							<FormLabel className="flex items-center gap-1.5">
 								<span className="text-blue-600">◇</span> 추가 코멘트
-								<span className="text-xs text-muted-foreground font-normal">(선택)</span>
+								<span className="text-xs text-muted-foreground font-normal">
+									(선택)
+								</span>
 							</FormLabel>
 							<FormControl>
 								<Textarea
@@ -184,7 +190,11 @@ export function CoachBulletForm({
 				)}
 
 				<div className="fixed bottom-0 left-0 right-0 max-w-screen-sm mx-auto p-4 bg-background border-t z-20">
-					<Button type="submit" disabled={submitting} className="w-full h-12 text-base">
+					<Button
+						type="submit"
+						disabled={submitting}
+						className="w-full h-12 text-base"
+					>
 						{submitting ? "letter 작성 중..." : "AI letter 작성 시작"}
 					</Button>
 				</div>
@@ -194,7 +204,7 @@ export function CoachBulletForm({
 }
 
 function errorMessage(
-	error: "validation" | "no_consent" | "duplicate" | "llm_failed",
+	error: "validation" | "no_consent" | "not_found" | "duplicate" | "llm_failed",
 	details?: string,
 ): string {
 	switch (error) {
@@ -202,6 +212,8 @@ function errorMessage(
 			return details ?? "입력값을 다시 확인해 주세요.";
 		case "no_consent":
 			return "이 학생의 부모 동의가 등록되지 않았습니다. 학원 관리자에게 문의해 주세요.";
+		case "not_found":
+			return "평가 정보를 찾을 수 없습니다.";
 		case "duplicate":
 			return "오늘 날짜로 이미 평가가 진행 중입니다.";
 		case "llm_failed":
