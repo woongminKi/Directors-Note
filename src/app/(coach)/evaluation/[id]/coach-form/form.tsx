@@ -215,7 +215,7 @@ function errorMessage(
 		case "not_found":
 			return "평가 정보를 찾을 수 없습니다.";
 		case "duplicate":
-			return "오늘 날짜로 이미 평가가 진행 중입니다.";
+			return "이미 부모님께 발송된 평가입니다. 수정이 필요하면 관리자에게 문의해 주세요.";
 		case "llm_failed":
 			return "letter 작성에 실패했습니다. 다시 시도해 주세요.";
 	}
