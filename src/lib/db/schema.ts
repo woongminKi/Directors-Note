@@ -33,7 +33,7 @@ export const users = pgTable("users", {
 	academyId: uuid("academy_id")
 		.notNull()
 		.references(() => academies.id),
-	role: text("role").notNull(),
+	role: text("role").$type<"owner" | "coach" | "admin">().notNull(),
 	email: text("email").notNull(),
 	kakaoId: text("kakao_id"),
 	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
