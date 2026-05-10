@@ -47,6 +47,7 @@ export const students = pgTable("students", {
 		.notNull()
 		.references(() => academies.id),
 	name: text("name").notNull(),
+	year: text("year"),
 	parentConsentOnFileAt: timestamp("parent_consent_on_file_at", { withTimezone: true }),
 	parentConsentArtifactUrl: text("parent_consent_artifact_url"),
 	parentConsentVersion: text("parent_consent_version"),
