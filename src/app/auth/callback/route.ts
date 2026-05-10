@@ -7,7 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
 	const url = new URL(request.url);
 	const code = url.searchParams.get("code");
-	const next = url.searchParams.get("next") ?? "/students";
+	const rawNext = url.searchParams.get("next") ?? "/students";
+	const next =
+		rawNext.startsWith("/") && !rawNext.startsWith("//")
+			? rawNext
+			: "/students";
 
 	if (!code) {
 		return NextResponse.redirect(new URL("/auth/not-invited", url.origin), 307);
@@ -34,14 +38,10 @@ export async function GET(request: Request) {
 		return NextResponse.redirect(new URL("/auth/not-invited", url.origin), 307);
 	}
 
-	if (!row.id) {
-		await db
-			.update(users)
-			.set({ id: data.user.id })
-			.where(eq(users.email, data.user.email));
-		return NextResponse.redirect(new URL(next, url.origin), 307);
-	}
-
+	// row.id is non-null (PK constraint) and must match auth.users.id.
+	// Mismatch means the email is taken by a different auth identity → reject.
+	// Pre-seeded rows are created with auth.users.id already populated via the
+	// Supabase Admin invite flow (see T30 inviteUser action).
 	if (row.id !== data.user.id) {
 		await supabase.auth.signOut();
 		return NextResponse.redirect(new URL("/auth/not-invited", url.origin), 307);

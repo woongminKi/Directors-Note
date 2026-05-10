@@ -6,9 +6,6 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/db/client", () => ({
 	db: {
 		query: { users: { findFirst: vi.fn() } },
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({ where: vi.fn(() => Promise.resolve()) })),
-		})),
 	},
 }));
 
@@ -38,33 +35,6 @@ describe("GET /auth/callback", () => {
 		const res = await GET(makeReq("http://localhost/auth/callback?code=x"));
 		expect(res.status).toBe(307);
 		expect(res.headers.get("location")).toContain("/auth/not-invited");
-	});
-
-	it("attaches auth.users.id when row exists with NULL id", async () => {
-		vi.mocked(createClient).mockResolvedValue({
-			auth: {
-				exchangeCodeForSession: async () => ({ error: null }),
-				getUser: async () => ({
-					data: { user: { id: "auth-1", email: "coach@x" } },
-					error: null,
-				}),
-			},
-		} as unknown as Awaited<ReturnType<typeof createClient>>);
-		vi.mocked(db.query.users.findFirst).mockResolvedValue({
-			id: null,
-			email: "coach@x",
-			academyId: "acad-1",
-			role: "coach",
-		} as unknown as ReturnType<typeof db.query.users.findFirst> extends Promise<
-			infer T
-		>
-			? T
-			: never);
-
-		const res = await GET(makeReq("http://localhost/auth/callback?code=x"));
-		expect(res.status).toBe(307);
-		expect(res.headers.get("location")).toContain("/students");
-		expect(db.update).toHaveBeenCalled();
 	});
 
 	it("redirects to next param when row.id matches auth.users.id", async () => {
