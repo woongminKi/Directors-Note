@@ -23,8 +23,12 @@ export const academies = pgTable("academies", {
 	name: text("name").notNull(),
 	billingStatus: text("billing_status").notNull().default("free_pilot"),
 	seatCount: integer("seat_count").notNull().default(0),
-	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 });
 
 // ─── users (Supabase auth.users 와 1:1) ────────────────────────────
@@ -36,8 +40,12 @@ export const users = pgTable("users", {
 	role: text("role").$type<"owner" | "coach" | "admin">().notNull(),
 	email: text("email").notNull(),
 	kakaoId: text("kakao_id"),
-	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 });
 
 // ─── students ──────────────────────────────────────────────────────
@@ -48,12 +56,18 @@ export const students = pgTable("students", {
 		.references(() => academies.id),
 	name: text("name").notNull(),
 	year: text("year"),
-	parentConsentOnFileAt: timestamp("parent_consent_on_file_at", { withTimezone: true }),
+	parentConsentOnFileAt: timestamp("parent_consent_on_file_at", {
+		withTimezone: true,
+	}),
 	parentConsentArtifactUrl: text("parent_consent_artifact_url"),
 	parentConsentVersion: text("parent_consent_version"),
 	softDeletedAt: timestamp("soft_deleted_at", { withTimezone: true }),
-	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 });
 
 // ─── reference_videos ──────────────────────────────────────────────
@@ -66,7 +80,9 @@ export const referenceVideos = pgTable("reference_videos", {
 	sceneType: text("scene_type").notNull(),
 	techniqueTag: text("technique_tag"),
 	storageUrl: text("storage_url").notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 });
 
 // ─── evaluations ───────────────────────────────────────────────────
@@ -83,9 +99,15 @@ export const evaluations = pgTable("evaluations", {
 		.references(() => users.id),
 	evaluationDate: date("evaluation_date").notNull(),
 	videoStorageUrl: text("video_storage_url"), // right-to-delete 후 NULL
-	videoLifecycleExpiresAt: timestamp("video_lifecycle_expires_at", { withTimezone: true }).notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	videoLifecycleExpiresAt: timestamp("video_lifecycle_expires_at", {
+		withTimezone: true,
+	}).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 });
 
 // ─── ai_analyses (3 axes for v1) ───────────────────────────────────
@@ -102,20 +124,34 @@ export const aiAnalyses = pgTable(
 			.references(() => evaluations.id, { onDelete: "cascade" }),
 		vocalScore: numeric("vocal_score", { precision: 3, scale: 1 }),
 		expressionScore: numeric("expression_score", { precision: 3, scale: 1 }),
-		examReadinessScore: numeric("exam_readiness_score", { precision: 3, scale: 1 }),
+		examReadinessScore: numeric("exam_readiness_score", {
+			precision: 3,
+			scale: 1,
+		}),
 		internalGrade: text("internal_grade").notNull(), // 코치 only — P2 hold
-		calibrationMatchScore: numeric("calibration_match_score", { precision: 4, scale: 3 }),
+		calibrationMatchScore: numeric("calibration_match_score", {
+			precision: 4,
+			scale: 3,
+		}),
 		evaluatorUsed: text("evaluator_used").notNull(), // 'cosine' | 'llm_as_judge'
 		cosineConfidence: numeric("cosine_confidence", { precision: 4, scale: 3 }),
 		rawResponseJson: jsonb("raw_response_json").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(t) => [
 		check("vocal_range", sql`${t.vocalScore} BETWEEN 0 AND 10`),
 		check("expression_range", sql`${t.expressionScore} BETWEEN 0 AND 10`),
-		check("exam_readiness_range", sql`${t.examReadinessScore} BETWEEN 0 AND 10`),
+		check(
+			"exam_readiness_range",
+			sql`${t.examReadinessScore} BETWEEN 0 AND 10`,
+		),
 		check("grade_enum", sql`${t.internalGrade} IN ('A','B','C','D')`),
-		check("evaluator_enum", sql`${t.evaluatorUsed} IN ('cosine','llm_as_judge')`),
+		check(
+			"evaluator_enum",
+			sql`${t.evaluatorUsed} IN ('cosine','llm_as_judge')`,
+		),
 	],
 );
 
@@ -136,12 +172,20 @@ export const feedbackDrafts = pgTable(
 		status: text("status").notNull().default("draft"),
 		approvedAt: timestamp("approved_at", { withTimezone: true }),
 		shareLinkTokenHash: text("share_link_token_hash").unique(),
-		shareLinkExpiresAt: timestamp("share_link_expires_at", { withTimezone: true }),
+		shareLinkExpiresAt: timestamp("share_link_expires_at", {
+			withTimezone: true,
+		}),
 		sentAt: timestamp("sent_at", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
-	(t) => [check("status_enum", sql`${t.status} IN ('draft','approved','sent')`)],
+	(t) => [
+		check("status_enum", sql`${t.status} IN ('draft','approved','sent')`),
+	],
 );
 
 // ─── embeddings (pgvector) ─────────────────────────────────────────
@@ -158,8 +202,44 @@ export type Embedding = {
 	createdAt: Date;
 };
 
+// ─── relations ────────────────────────────────────────────────────────────────
+import { relations } from "drizzle-orm";
+
+export const evaluationsRelations = relations(evaluations, ({ one }) => ({
+	student: one(students, {
+		fields: [evaluations.studentId],
+		references: [students.id],
+	}),
+	feedbackDraft: one(feedbackDrafts, {
+		fields: [evaluations.id],
+		references: [feedbackDrafts.evaluationId],
+	}),
+	aiAnalysis: one(aiAnalyses, {
+		fields: [evaluations.id],
+		references: [aiAnalyses.evaluationId],
+	}),
+}));
+
+export const studentsRelations = relations(students, ({ many }) => ({
+	evaluations: many(evaluations),
+}));
+
+export const feedbackDraftsRelations = relations(feedbackDrafts, ({ one }) => ({
+	evaluation: one(evaluations, {
+		fields: [feedbackDrafts.evaluationId],
+		references: [evaluations.id],
+	}),
+}));
+
+export const aiAnalysesRelations = relations(aiAnalyses, ({ one }) => ({
+	evaluation: one(evaluations, {
+		fields: [aiAnalyses.evaluationId],
+		references: [evaluations.id],
+	}),
+}));
+
 // 타입 helpers
-import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export type Academy = InferSelectModel<typeof academies>;
 export type NewAcademy = InferInsertModel<typeof academies>;
 export type User = InferSelectModel<typeof users>;
