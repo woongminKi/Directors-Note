@@ -46,3 +46,27 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 
 - [ ] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string.
 - [ ] **Race condition**: No `UNIQUE(student_id, evaluation_date)` constraint on `evaluations` table. Double-submit during start-evaluation creates duplicate rows. Add migration 0005 + `.onConflictDoNothing()` in `startEvaluation`.
+
+## Implementation complete (2026-05-10)
+
+All 32 tasks from `docs/superpowers/plans/2026-05-10-student-eval-letter-flow.md` shipped to main.
+
+**Phases:**
+- 1 (Auth foundation): T1-T6 — env, getCurrentUser, requireAuth/Role, login, OAuth callback, dev-bypass removal
+- 2 (Schema): T7 — students.year migration draft
+- 3 (Students CRUD): T8-T13 — schema, queries, actions, form, pages, archive modal
+- 4 (Eval start): T14-T15 — startEvaluation action + button wiring
+- 5 (Approach-A wire): T16 — coach-form actions wiring + redirect
+- 6 (Review/Send): T17-T22 — validate-letter, share-link, finalizeAndSend, review page, editor, share-link card, E2E
+- 7 (Parent landing): T23-T25 — service-role client, RPC test, parent landing page
+- 8 (Approach-C stub): T26-T29 — upload action, SSE handler, video upload UI, streaming timeline, tests
+- 9 (Admin invite): T30-T31 — admin layout, invite form, integration test
+- 10 (Cleanup): T32 — verify dev bypass + signup gone + seed guards
+
+**Pending operator actions (NOT code tasks):**
+- Apply migration `0003_students_year.sql.draft` to dev Supabase via `mv ... .sql && supabase db push`.
+- Configure Kakao OAuth in Supabase Auth dashboard (provider settings + redirect URL).
+- Generate real `SHARE_LINK_PEPPER` via `openssl rand -base64 48` and set in `.env.local`.
+- Set `NEXT_PUBLIC_APP_URL` to production domain.
+- Create Supabase Storage bucket `student-videos` with appropriate policies (only when `FEATURE_AI_VIDEO_ANALYSIS=true`).
+- Verify pre-invited users can complete Kakao OAuth round-trip (T30 caveat — auth.users.id may differ across providers).
