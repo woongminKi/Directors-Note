@@ -67,7 +67,7 @@ export async function updateStudent(
 				: null,
 			updatedAt: new Date(),
 		})
-		.where(eq(students.id, id));
+		.where(and(eq(students.id, id), eq(students.academyId, academyId)));
 
 	revalidatePath("/students");
 	revalidatePath(`/students/${id}`);
@@ -81,6 +81,8 @@ export async function archiveStudent(id: string): Promise<ActionResult> {
 		where: and(eq(students.id, id), eq(students.academyId, academyId)),
 	});
 	if (!existing) return { ok: false, error: "학생을 찾을 수 없습니다" };
+	if (existing.softDeletedAt)
+		return { ok: false, error: "이미 삭제된 학생입니다" };
 
 	await db
 		.update(students)
@@ -90,7 +92,7 @@ export async function archiveStudent(id: string): Promise<ActionResult> {
 			softDeletedAt: new Date(),
 			updatedAt: new Date(),
 		})
-		.where(eq(students.id, id));
+		.where(and(eq(students.id, id), eq(students.academyId, academyId)));
 
 	revalidatePath("/students");
 	return { ok: true };

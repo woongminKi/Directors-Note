@@ -79,6 +79,19 @@ describe("archiveStudent", () => {
 		const res = await archiveStudent("stu-missing");
 		expect(res.ok).toBe(false);
 	});
+
+	it("rejects when student is already archived", async () => {
+		vi.mocked(db.query.students.findFirst).mockResolvedValue({
+			id: "stu-1",
+			name: "박지윤",
+			academyId: "acad-1",
+			softDeletedAt: new Date(),
+			// biome-ignore lint/suspicious/noExplicitAny: partial mock
+		} as any);
+		const res = await archiveStudent("stu-1");
+		expect(res.ok).toBe(false);
+		if (!res.ok) expect(res.error).toContain("이미 삭제");
+	});
 });
 
 describe("updateStudent", () => {
