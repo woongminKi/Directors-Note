@@ -107,7 +107,7 @@ describe("updateStudent", () => {
 		);
 		vi.mocked(db.query.students.findFirst).mockResolvedValue(
 			// biome-ignore lint/suspicious/noExplicitAny: partial mock
-			{ id: "stu-1", academyId: "acad-1" } as any,
+			{ id: "stu-1", academyId: "acad-1", parentConsentOnFileAt: null } as any,
 		);
 	});
 
@@ -116,5 +116,17 @@ describe("updateStudent", () => {
 		await expect(
 			updateStudent("stu-1", { name: "박지윤", parentConsentOnFile: true }),
 		).rejects.toThrow();
+	});
+
+	it("allows coach role to edit name without changing consent", async () => {
+		vi.mocked(requireRole).mockRejectedValue(
+			new Error("requireRole should not have been called"),
+		);
+		const res = await updateStudent("stu-1", {
+			name: "새이름",
+			parentConsentOnFile: false,
+		});
+		expect(res.ok).toBe(true);
+		expect(requireRole).not.toHaveBeenCalled();
 	});
 });

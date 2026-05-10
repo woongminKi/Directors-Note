@@ -42,11 +42,8 @@ export async function updateStudent(
 	id: string,
 	input: StudentFormInput,
 ): Promise<ActionResult> {
-	// Consent toggle requires owner/admin; other field edits allowed for any auth'd user in same academy
-	const { academyId } =
-		input.parentConsentOnFile !== undefined
-			? await requireRole(["owner", "admin"])
-			: await requireAuth();
+	// Load auth first, then parse, then find existing, then check if consent changed
+	const { academyId } = await requireAuth();
 
 	const parsed = studentFormSchema.safeParse(input);
 	if (!parsed.success)
@@ -56,6 +53,13 @@ export async function updateStudent(
 		where: and(eq(students.id, id), eq(students.academyId, academyId)),
 	});
 	if (!existing) return { ok: false, error: "학생을 찾을 수 없습니다" };
+
+	// Consent toggle requires owner/admin; compare against existing state
+	const consentChanged =
+		parsed.data.parentConsentOnFile !== !!existing.parentConsentOnFileAt;
+	if (consentChanged) {
+		await requireRole(["owner", "admin"]);
+	}
 
 	await db
 		.update(students)
