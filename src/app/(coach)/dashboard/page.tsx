@@ -9,6 +9,11 @@ import {
 	getSentRecent,
 } from "@/lib/dashboard/queries";
 import {
+	evalTodoToRow,
+	reviewPendingToRow,
+	sentToRow,
+} from "@/lib/dashboard/row-mappers";
+import {
 	fetchCoachProgress,
 	fetchEscalation,
 	fetchEvalTodoRows,
@@ -47,27 +52,9 @@ export default async function DashboardPage() {
 	const displayName = user.appUser.email.split("@")[0] ?? "사용자";
 	const pendingTaskCount = evalTodo.length + reviewPending.length;
 
-	const evalTodoRows = evalTodo.map((t) => ({
-		id: t.studentId,
-		studentName: t.studentName,
-		year: t.year,
-		href: `/students/${t.studentId}`,
-		metaLabel: t.lastGrade ?? undefined,
-	}));
-	const reviewPendingRows = reviewPending.map((t) => ({
-		id: t.feedbackDraftId,
-		studentName: t.studentName,
-		year: t.year,
-		href: `/evaluation/${t.evaluationId}/review`,
-		metaLabel: t.internalGrade ?? undefined,
-	}));
-	const sentRows = sentRecent.map((t) => ({
-		id: t.feedbackDraftId,
-		studentName: t.studentName,
-		year: t.year,
-		href: `/evaluation/${t.evaluationId}/review`,
-		metaLabel: "발송됨",
-	}));
+	const evalTodoRows = evalTodo.map(evalTodoToRow);
+	const reviewPendingRows = reviewPending.map(reviewPendingToRow);
+	const sentRows = sentRecent.map(sentToRow);
 
 	return (
 		<div className="space-y-4">

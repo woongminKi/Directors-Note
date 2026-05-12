@@ -12,42 +12,11 @@ import {
 	getSentRecent,
 	type SentItem,
 } from "@/lib/dashboard/queries";
-
-function evalTodoToRow(
-	t: Awaited<ReturnType<typeof getEvaluationTodo>>[number],
-): QueueRow {
-	return {
-		id: t.studentId,
-		studentName: t.studentName,
-		year: t.year,
-		href: `/students/${t.studentId}`,
-		metaLabel: t.lastGrade ?? undefined,
-	};
-}
-
-function reviewPendingToRow(
-	t: Awaited<ReturnType<typeof getReviewPending>>[number],
-): QueueRow {
-	return {
-		id: t.feedbackDraftId,
-		studentName: t.studentName,
-		year: t.year,
-		href: `/evaluation/${t.evaluationId}/review`,
-		metaLabel: t.internalGrade ?? undefined,
-	};
-}
-
-function sentToRow(
-	t: Awaited<ReturnType<typeof getSentRecent>>[number],
-): QueueRow {
-	return {
-		id: t.feedbackDraftId,
-		studentName: t.studentName,
-		year: t.year,
-		href: `/evaluation/${t.evaluationId}/review`,
-		metaLabel: "발송됨",
-	};
-}
+import {
+	evalTodoToRow,
+	reviewPendingToRow,
+	sentToRow,
+} from "@/lib/dashboard/row-mappers";
 
 export async function fetchEvalTodoRows(): Promise<QueueRow[]> {
 	const user = await requireAuth();
