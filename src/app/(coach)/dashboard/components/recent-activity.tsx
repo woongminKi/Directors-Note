@@ -22,11 +22,12 @@ function relativeTime(d: Date): string {
 }
 
 export function RecentActivity({ queryKey, fetcher, initialData }: Props) {
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, isError } = useQuery({
 		queryKey,
 		queryFn: fetcher,
 		refetchInterval: 60_000,
 		initialData,
+		initialDataUpdatedAt: initialData ? Date.now() : undefined,
 	});
 
 	return (
@@ -40,6 +41,10 @@ export function RecentActivity({ queryKey, fetcher, initialData }: Props) {
 						<Skeleton className="h-6 w-full" />
 						<Skeleton className="h-6 w-full" />
 					</div>
+				) : isError ? (
+					<p className="px-6 py-6 text-center text-sm text-destructive">
+						불러오기 실패. 새로고침 해주세요.
+					</p>
 				) : !data || data.length === 0 ? (
 					<p className="px-6 py-6 text-center text-sm text-muted-foreground">
 						아직 활동이 없습니다.

@@ -37,6 +37,9 @@ export function QueueCard({
 		queryFn: fetcher,
 		refetchInterval: pollIntervalMs,
 		initialData,
+		// Server Component just fetched this — mark fresh so React Query
+		// respects staleTime instead of refetching immediately on mount.
+		initialDataUpdatedAt: initialData ? Date.now() : undefined,
 	});
 
 	return (

@@ -30,6 +30,7 @@ export function OwnerStatusRow({
 		queryFn: fetchCoaches,
 		refetchInterval: 60_000,
 		initialData: initialCoaches,
+		initialDataUpdatedAt: Date.now(),
 	});
 
 	const escalation = useQuery({
@@ -37,11 +38,14 @@ export function OwnerStatusRow({
 		queryFn: fetchEscalation,
 		refetchInterval: 60_000,
 		initialData: initialEscalation,
+		initialDataUpdatedAt: Date.now(),
 	});
 
 	const alerts: EscalationAlert[] = escalation.data
 		? deriveEscalations(escalation.data)
 		: [];
+
+	const hasError = coaches.isError || escalation.isError;
 
 	return (
 		<section
@@ -54,6 +58,10 @@ export function OwnerStatusRow({
 					<Skeleton className="h-12 w-32" />
 					<Skeleton className="h-12 w-32" />
 				</>
+			) : hasError ? (
+				<p className="text-sm text-destructive">
+					불러오기 실패. 새로고침 해주세요.
+				</p>
 			) : (
 				coaches.data?.map((c) => (
 					<CoachProgressBar
