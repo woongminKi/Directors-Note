@@ -1,5 +1,15 @@
 "use server";
 
+// Session expiry during polling:
+// requireAuth() calls redirect("/login") when the user's Supabase session has
+// expired. In a Server Action invoked from useQuery (via the action RPC), the
+// NEXT_REDIRECT exception propagates to Next.js, which sends a redirect
+// response — the framework redirects the client when the response is consumed.
+// If a polling fetcher reports `isError` for an extended period, the user has
+// likely been redirected to /login already. We do NOT catch the redirect here
+// — that would swallow the navigation. Same pattern as every other server
+// action in this codebase (students/actions.ts, evaluations/start-action.ts).
+
 import type { QueueRow } from "@/app/(coach)/dashboard/components/queue-card";
 import { requireAuth } from "@/lib/auth/require-auth";
 import {
