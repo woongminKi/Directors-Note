@@ -189,31 +189,40 @@ export async function getSentRecent(
 }
 
 // ─── 4) Owner widget — 코치별 진행률 ───────────────────────────────
+// All counters are scoped to the current calendar month so progressRatio
+// reflects this-cycle work, not lifetime totals. totalStudents is merged
+// into the same query via a CTE — saves one round-trip vs the prior split.
 export async function getOwnerCoachProgress(
 	academyId: string,
 ): Promise<CoachProgress[]> {
-	const totalStudentsResult = await db
-		.select({ c: count() })
-		.from(students)
-		.where(
-			and(eq(students.academyId, academyId), isNull(students.softDeletedAt)),
-		);
-	const totalStudents = totalStudentsResult[0]?.c ?? 0;
-
 	type Row = {
 		user_id: string;
 		email: string;
 		completed: number;
 		pending: number;
 		sent: number;
+		total_students: number;
 	};
 	const rows = await db.execute<Row>(sql`
+		WITH total_students AS (
+			SELECT COUNT(*) AS c FROM students
+			WHERE academy_id = ${academyId} AND soft_deleted_at IS NULL
+		)
 		SELECT
 			u.id::text AS user_id,
 			u.email,
-			COUNT(DISTINCT e.id) FILTER (WHERE e.evaluation_date >= date_trunc('month', now())) AS completed,
-			COUNT(DISTINCT fd.id) FILTER (WHERE fd.status = 'draft') AS pending,
-			COUNT(DISTINCT fd.id) FILTER (WHERE fd.status = 'sent') AS sent
+			COUNT(DISTINCT e.id) FILTER (
+				WHERE e.evaluation_date >= date_trunc('month', now())
+			) AS completed,
+			COUNT(DISTINCT fd.id) FILTER (
+				WHERE fd.status = 'draft'
+				  AND e.evaluation_date >= date_trunc('month', now())
+			) AS pending,
+			COUNT(DISTINCT fd.id) FILTER (
+				WHERE fd.status = 'sent'
+				  AND e.evaluation_date >= date_trunc('month', now())
+			) AS sent,
+			(SELECT c FROM total_students) AS total_students
 		FROM users u
 		LEFT JOIN evaluations e ON e.coach_user_id = u.id AND e.academy_id = ${academyId}
 		LEFT JOIN feedback_drafts fd ON fd.evaluation_id = e.id
@@ -226,6 +235,7 @@ export async function getOwnerCoachProgress(
 		const completed = Number(r.completed);
 		const pending = Number(r.pending);
 		const sent = Number(r.sent);
+		const totalStudents = Number(r.total_students);
 		const assigned =
 			totalStudents > 0 ? totalStudents : completed + pending + sent;
 		return {
