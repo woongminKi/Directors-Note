@@ -177,15 +177,32 @@ export async function getSentRecent(
 		.orderBy(desc(feedbackDrafts.sentAt))
 		.limit(limit);
 
-	return rows.map((r) => ({
-		feedbackDraftId: r.feedbackDraftId,
-		evaluationId: r.evaluationId,
-		studentName: r.studentName,
-		year: r.year,
-		internalGrade: (r.internalGrade ?? null) as InternalGrade | null,
-		sentAt: r.sentAt ?? new Date(),
-		parentViewedAt: null,
-	}));
+	// Data integrity: status='sent' implies sentAt IS NOT NULL by virtue of
+	// finalize-action.ts setting both together in one transaction. There is
+	// no DB-level CHECK enforcing this yet (TODO: add via future migration).
+	// We filter null rows and warn, rather than masking with `?? new Date()`
+	// (which silently surfaced bad rows at the top of the list ordered by
+	// sentAt DESC). Filtering keeps the UI honest.
+	return rows
+		.filter((r) => {
+			if (r.sentAt === null) {
+				console.warn(
+					`[getSentRecent] feedback_drafts row ${r.feedbackDraftId} has status='sent' but sentAt IS NULL — skipping`,
+				);
+				return false;
+			}
+			return true;
+		})
+		.map((r) => ({
+			feedbackDraftId: r.feedbackDraftId,
+			evaluationId: r.evaluationId,
+			studentName: r.studentName,
+			year: r.year,
+			internalGrade: (r.internalGrade ?? null) as InternalGrade | null,
+			// biome-ignore lint/style/noNonNullAssertion: filtered above
+			sentAt: r.sentAt!,
+			parentViewedAt: null,
+		}));
 }
 
 // ─── 4) Owner widget — 코치별 진행률 ───────────────────────────────
