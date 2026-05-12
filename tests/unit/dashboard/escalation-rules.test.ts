@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-	type EscalationInput,
 	deriveEscalations,
+	type EscalationInput,
 } from "@/lib/dashboard/escalation-rules";
 
 const baseInput: EscalationInput = {
@@ -35,7 +35,9 @@ describe("deriveEscalations", () => {
 	});
 
 	it("does not emit ai-failure when <= 5", () => {
-		expect(deriveEscalations({ ...baseInput, aiFailuresLast24h: 5 })).toEqual([]);
+		expect(deriveEscalations({ ...baseInput, aiFailuresLast24h: 5 })).toEqual(
+			[],
+		);
 	});
 
 	it("combines multiple kinds in stable order (regression first)", () => {
