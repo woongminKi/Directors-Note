@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Providers } from "@/app/providers";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import "../styles/pretendard.css";
@@ -16,7 +17,7 @@ export default function RootLayout({
 	return (
 		<html lang="ko" className="h-full antialiased">
 			<body className="min-h-full flex flex-col font-sans">
-				{children}
+				<Providers>{children}</Providers>
 				<Toaster />
 			</body>
 		</html>
