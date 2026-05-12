@@ -47,6 +47,20 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 - [ ] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string.
 - [ ] **Race condition**: No `UNIQUE(student_id, evaluation_date)` constraint on `evaluations` table. Double-submit during start-evaluation creates duplicate rows. Add migration 0005 + `.onConflictDoNothing()` in `startEvaluation`.
 
+## Deferred from dashboard final review (2026-05-12)
+
+From the coach dashboard implementation (`docs/superpowers/plans/2026-05-12-coach-dashboard.md`, 17 tasks shipped). All non-blocking quality improvements.
+
+- [ ] **`initialDataUpdatedAt` for TanStack Query polling**: `QueueCard`, `OwnerStatusRow`, `RecentActivity` pass `initialData` without `initialDataUpdatedAt`. Query treats data as fetched at epoch=0, so every page mount triggers an immediate background refetch even though Server Component just fetched the same rows. Add `initialDataUpdatedAt: initialData ? Date.now() : undefined` in each `useQuery` call.
+- [ ] **Extract row-mapper functions**: `page.tsx` and `actions.ts` duplicate the `evalTodo → QueueRow` / `reviewPending → QueueRow` / `sent → QueueRow` mapping logic. Move to `src/lib/dashboard/row-mappers.ts` and import from both. (Can't share via actions.ts because `"use server"` files only export async functions.)
+- [ ] **Error state on `RecentActivity` + `OwnerStatusRow`**: `QueueCard` handles `isError`; the other two polling components silently render nothing on fetch failure. Add the same Korean error message pattern. Spec §5.3.
+- [ ] **Session-expiry polling behavior**: When a session expires mid-polling, `requireAuth()` calls `redirect("/login")` which becomes a `NEXT_REDIRECT` exception in server actions — caught by `useQuery` as a generic error, no actual redirect. Either wrap auth in try/catch and return `{ error: "unauthorized" }` so client can `router.push("/login")`, or document the limitation prominently in `dashboard/actions.ts`.
+- [ ] **Date serialization type drift**: `getSentRecent` returns `sentAt: Date` and `createdAt: Date`, but Next.js serializes these to ISO strings when passing Server → Client. `RecentActivity` works (`new Date(d)` accepts strings) but the types say `Date`. Either widen to `Date | string` or call `new Date(item.sentAt)` explicitly.
+- [ ] **`getOwnerCoachProgress` mixes time windows**: `completed` is this-month, `sent` is all-time. `progressRatio = (completed + sent) / totalStudents` inflates over time. Decide whether owner progress is month-scoped (preferred) and rewrite the SQL `FILTER` to match.
+- [ ] **`sentAt ?? new Date()` masks data integrity violation**: a row with `status='sent'` and `sentAt IS NULL` should not exist; the fallback hides it. Add a Postgres CHECK constraint linking the two, or remove the fallback and let it propagate.
+- [ ] **`getOwnerCoachProgress` 2 round-trips**: Merge the `totalStudents` count into the per-coach query via `COUNT(*) OVER ()` window function. Saves 1 DB call.
+- [ ] **`students.year` migration apply**: `migrations/0003_students_year.sql.draft` still draft. Dashboard queries reference the column. Without applying, runtime fails with "column does not exist." Apply via `mv 0003_students_year.sql.draft 0003_students_year.sql && supabase db push`.
+
 ## Implementation complete (2026-05-10)
 
 All 32 tasks from `docs/superpowers/plans/2026-05-10-student-eval-letter-flow.md` shipped to main.
