@@ -11,7 +11,11 @@ interface Props {
 	initialData?: SentItem[];
 }
 
-function relativeTime(d: Date): string {
+// Next.js serializes Date → ISO string when passing Server Component props
+// or server-action results to Client Components, so polled `sentAt` values
+// arrive as strings even though queries.ts types them as Date.
+// `new Date(...)` accepts both shapes, so the runtime is correct either way.
+function relativeTime(d: Date | string): string {
 	const diff = Date.now() - new Date(d).getTime();
 	const minutes = Math.floor(diff / 60_000);
 	if (minutes < 60) return `${minutes}분 전`;
