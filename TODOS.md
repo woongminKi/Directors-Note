@@ -44,11 +44,18 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 
 - [ ] **Kakao OAuth vs pre-invited users**: When a coach is invited via `inviteUserByEmail`, Supabase creates an `auth.users` row with a magic-link identity. If the coach later signs in via Kakao OAuth, Supabase may create a *different* `auth.users.id` for the Kakao identity provider — causing the `/auth/callback` `id` mismatch check to reject them. Test end-to-end: invite a user via T30 invite form, have them log in with Kakao OAuth, and verify they land on `/students` without error. If IDs diverge, consider linking identities via `supabase.auth.admin.linkIdentity` or using the email match path in `/auth/callback` instead of ID match.
 
-## Deferred from E2E auth setup (2026-05-14)
+## Deferred from E2E auth setup (2026-05-14) — RESOLVED 2026-05-14
 
-- [ ] **Playwright `storageState` fixture generation for E2E specs.** `tests/e2e/*.spec.ts` all skip on missing `E2E_AUTH_READY`. Attempted automation via `auth.admin.generateLink({ type: 'magiclink' })` + Playwright follow — but Supabase project is on **implicit flow** (returns tokens in hash fragment `#access_token=...`), while our `/auth/callback` expects PKCE-style `?code=` query param. Result: Playwright lands on `/auth/not-invited` even though tokens are in the URL hash.
-  - **Options to resolve:** (a) flip Supabase project to PKCE flow (Auth settings — check impact on existing Kakao OAuth roundtrip first); (b) extend `/auth/callback/route.ts` to handle implicit flow tokens in addition to PKCE; (c) construct `sb-<ref>-auth-token` cookie directly from admin-API-minted access_token + refresh_token (couples to @supabase/ssr internal cookie format — fragile); (d) add dev-only `/dev/login` surface that signs in via password (security smell). Recommend (a) if compatible, else (b).
-  - **Trigger:** when E2E test runs become high-value — e.g. before academy #2 onboarding, or after a regression slips through manual QA.
+- [x] **Playwright `storageState` fixture generation** → Option (c) cookie-direct shipped (commit `e2dad92`). `bun run e2e:auth-setup` writes `tests/.auth/{owner,coach}.json` via password-grant + `@supabase/ssr` cookie-value encoding. E2E specs run with `E2E_AUTH_READY=1 bun run test:e2e`. Production Kakao OAuth path untouched.
+
+## E2E test-selector follow-ups (2026-05-14)
+
+E2E auth is working but 4 specs fail on selector / flow assumptions unrelated to auth. Fix when E2E becomes the regression net (likely before academy #2 onboard).
+
+- [ ] **E2E-D3** (`dashboard.spec.ts:17`): clicks first link with "년차"/Korean — picks up nav link `/students` instead of an eval-todo row. Tighten selector to scope inside the queue card.
+- [ ] **E2E-E1** (`review-send.spec.ts:5`): Approach-A flow end-to-end. Investigate — likely depends on a specific seed shape.
+- [ ] **E2E-S1** (`students.spec.ts:10`): owner adds student → expects H1 to contain "테스트 학생". Form submit likely redirects to `/students` (list) where H1 differs.
+- [ ] **E2E-S3** (`students.spec.ts:36`): archive modal flow. Selector `'[role="dialog"] button:has-text("보관")'` may not match new dialog structure.
 
 ## Deferred from T14 review (2026-05-10) — RESOLVED 2026-05-14
 
