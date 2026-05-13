@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { db } from "@/lib/db/client";
 import { students } from "@/lib/db/schema";
 import {
+	normalizeYear,
 	type StudentFormInput,
 	studentFormSchema,
 } from "@/lib/students/schema";
@@ -27,7 +28,7 @@ export async function createStudent(
 		.values({
 			academyId,
 			name: parsed.data.name,
-			year: parsed.data.year ?? null,
+			year: normalizeYear(parsed.data.year),
 			parentConsentOnFileAt: parsed.data.parentConsentOnFile
 				? new Date()
 				: null,
@@ -65,7 +66,7 @@ export async function updateStudent(
 		.update(students)
 		.set({
 			name: parsed.data.name,
-			year: parsed.data.year ?? null,
+			year: normalizeYear(parsed.data.year),
 			parentConsentOnFileAt: parsed.data.parentConsentOnFile
 				? (existing.parentConsentOnFileAt ?? new Date())
 				: null,

@@ -57,13 +57,9 @@ E2E auth working; 3 of 4 spec failures fixed in commits — E1 still skipped pen
 - [x] **E2E-S3** (`students.spec.ts`): same storage-missing root cause + same year-required workaround. List assertion now matches `STUDENT_DELETED` prefix (archive action wipes name for PIPA).
 - [ ] **E2E-E1** (`review-send.spec.ts`): currently `test.skip(true)` with FIXME. Submit click on /coach-form doesn't trigger onSubmit under Playwright headless — no toast, no error, no nav. All 3 axes are filled per snapshot. Probably react-hook-form / Playwright `.fill()` timing (last field's onChange may not have flushed before button click). Worth re-investigating only when E2E becomes regression-critical.
 
-## Real product bug surfaced 2026-05-14
+## Real product bug surfaced 2026-05-14 — RESOLVED 2026-05-14
 
-- [ ] **student form `year` schema bug**: `z.string().min(1).max(20).optional()` paired with default value `""` rejects empty submissions with the cryptic zod default "Too small: expected string to have >=1 characters". Either:
-  (a) loosen schema: `z.string().min(1).max(20).optional().or(z.literal(""))` and map `""` to undefined before insert, or
-  (b) require year and show a Korean error message ("구분을 입력해 주세요"), or
-  (c) default to `undefined` (omitProperty) instead of `""` in the form's defaultValues so `.optional()` actually applies.
-  Current behavior: friend's UI shows English zod error, which is broken UX. Fix before friend onboarding (E1 archive flow exposed this; almost certainly hits the friend's first try too).
+- [x] **student form `year` schema bug**: previously `z.string().min(1).max(20).optional()` rejected empty submissions with zod's English default. Resolved: dropped `.min(1)` (the data model is nullable text, no minimum required), added Korean message on `.max(20)`, and introduced `normalizeYear()` in `src/lib/students/schema.ts` — actions call it before insert so blank/whitespace lands as `null`. Friend's UI now accepts blank year; tests in `schema.test.ts` cover empty string + normalizer edges.
 
 ## Deferred from T14 review (2026-05-10) — RESOLVED 2026-05-14
 
