@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const insertReturning = vi.fn(async () => [{ id: "ev-NEW" }]);
+const insertOnConflictDoNothing = vi.fn(() => ({ returning: insertReturning }));
+const insertValues = vi.fn(() => ({
+	onConflictDoNothing: insertOnConflictDoNothing,
+	returning: insertReturning,
+}));
+
 vi.mock("@/lib/auth/require-auth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@/lib/db/client", () => ({
 	db: {
@@ -7,11 +14,7 @@ vi.mock("@/lib/db/client", () => ({
 			students: { findFirst: vi.fn() },
 			evaluations: { findFirst: vi.fn() },
 		},
-		insert: vi.fn(() => ({
-			values: vi.fn(() => ({
-				returning: vi.fn(async () => [{ id: "ev-NEW" }]),
-			})),
-		})),
+		insert: vi.fn(() => ({ values: insertValues })),
 	},
 }));
 
@@ -24,6 +27,7 @@ const partial = <T>(v: unknown): T => v as T;
 describe("startEvaluation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		insertReturning.mockResolvedValue([{ id: "ev-NEW" }]);
 		vi.mocked(requireAuth).mockResolvedValue({
 			academyId: "acad-1",
 			appUser: { id: "u-1", academyId: "acad-1", role: "coach", email: "x@y" },
@@ -51,15 +55,16 @@ describe("startEvaluation", () => {
 		if (res.ok) {
 			expect(res.evaluationId).toBe("ev-NEW");
 			expect(res.redirectTo).toContain("/coach-form");
+			expect(res.resumed).toBeUndefined();
 		}
 	});
 
-	it("resumes existing in-flight evaluation (status != sent)", async () => {
+	it("resumes existing same-day evaluation regardless of draft status", async () => {
 		vi.mocked(db.query.students.findFirst).mockResolvedValue(
 			partial({ id: "stu-1", parentConsentOnFileAt: new Date() }),
 		);
 		vi.mocked(db.query.evaluations.findFirst).mockResolvedValue(
-			partial({ id: "ev-OLD", feedbackDraft: { status: "draft" } }),
+			partial({ id: "ev-OLD" }),
 		);
 		const res = await startEvaluation("stu-1");
 		expect(res.ok).toBe(true);
@@ -69,16 +74,22 @@ describe("startEvaluation", () => {
 		}
 	});
 
-	it("creates new evaluation when previous is sent", async () => {
+	it("returns existing row when onConflictDoNothing returns empty (race lost)", async () => {
 		vi.mocked(db.query.students.findFirst).mockResolvedValue(
 			partial({ id: "stu-1", parentConsentOnFileAt: new Date() }),
 		);
-		vi.mocked(db.query.evaluations.findFirst).mockResolvedValue(
-			partial({ id: "ev-OLD", feedbackDraft: { status: "sent" } }),
-		);
+		// First findFirst (pre-insert): nothing.
+		// Second findFirst (post-conflict): the winning row.
+		vi.mocked(db.query.evaluations.findFirst)
+			.mockResolvedValueOnce(undefined)
+			.mockResolvedValueOnce(partial({ id: "ev-WINNER" }));
+		insertReturning.mockResolvedValueOnce([]); // conflict → empty
 		const res = await startEvaluation("stu-1");
 		expect(res.ok).toBe(true);
-		if (res.ok) expect(res.evaluationId).toBe("ev-NEW");
+		if (res.ok) {
+			expect(res.evaluationId).toBe("ev-WINNER");
+			expect(res.resumed).toBe(true);
+		}
 	});
 
 	it("redirects to /evaluation/[id] (Approach-C) when feature flag ON", async () => {

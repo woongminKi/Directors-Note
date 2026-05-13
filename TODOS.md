@@ -42,10 +42,10 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 
 - [ ] **Kakao OAuth vs pre-invited users**: When a coach is invited via `inviteUserByEmail`, Supabase creates an `auth.users` row with a magic-link identity. If the coach later signs in via Kakao OAuth, Supabase may create a *different* `auth.users.id` for the Kakao identity provider — causing the `/auth/callback` `id` mismatch check to reject them. Test end-to-end: invite a user via T30 invite form, have them log in with Kakao OAuth, and verify they land on `/students` without error. If IDs diverge, consider linking identities via `supabase.auth.admin.linkIdentity` or using the email match path in `/auth/callback` instead of ID match.
 
-## Deferred from T14 review (2026-05-10)
+## Deferred from T14 review (2026-05-10) — RESOLVED 2026-05-14
 
-- [ ] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string.
-- [ ] **Race condition**: No `UNIQUE(student_id, evaluation_date)` constraint on `evaluations` table. Double-submit during start-evaluation creates duplicate rows. Add migration 0005 + `.onConflictDoNothing()` in `startEvaluation`.
+- [x] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string. → Replaced by `kstToday()` in `src/lib/datetime.ts`. Also applied to `dashboard/queries.ts:cycleDeadline` and `coach-form/page.tsx:today` (same bug pattern).
+- [x] **Race condition**: No `UNIQUE(student_id, evaluation_date)` constraint on `evaluations` table. Double-submit during start-evaluation creates duplicate rows. Add migration 0005 + `.onConflictDoNothing()` in `startEvaluation`. → Migration `0005_evaluations_unique_per_day.sql` applied; `startEvaluation` uses `.onConflictDoNothing({ target: [studentId, evaluationDate] })` with re-fetch-on-conflict fallback. Behavior change: sent-same-day path now resumes the sent row instead of creating a new one (one eval per student per day).
 
 ## Deferred from dashboard final review (2026-05-12) — partially resolved
 

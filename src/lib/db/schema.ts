@@ -12,6 +12,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	unique,
 	uuid,
 	// pgvector 관련 type 은 drizzle-orm 0.30+ 에서 vector helper 제공
 	// import { vector } from 'drizzle-orm/pg-core'  // 또는 custom type
@@ -86,29 +87,36 @@ export const referenceVideos = pgTable("reference_videos", {
 });
 
 // ─── evaluations ───────────────────────────────────────────────────
-export const evaluations = pgTable("evaluations", {
-	id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-	academyId: uuid("academy_id")
-		.notNull()
-		.references(() => academies.id), // D9 비정규화
-	studentId: uuid("student_id")
-		.notNull()
-		.references(() => students.id),
-	coachUserId: uuid("coach_user_id")
-		.notNull()
-		.references(() => users.id),
-	evaluationDate: date("evaluation_date").notNull(),
-	videoStorageUrl: text("video_storage_url"), // right-to-delete 후 NULL
-	videoLifecycleExpiresAt: timestamp("video_lifecycle_expires_at", {
-		withTimezone: true,
-	}).notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
-	updatedAt: timestamp("updated_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
-});
+export const evaluations = pgTable(
+	"evaluations",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		academyId: uuid("academy_id")
+			.notNull()
+			.references(() => academies.id), // D9 비정규화
+		studentId: uuid("student_id")
+			.notNull()
+			.references(() => students.id),
+		coachUserId: uuid("coach_user_id")
+			.notNull()
+			.references(() => users.id),
+		evaluationDate: date("evaluation_date").notNull(),
+		videoStorageUrl: text("video_storage_url"), // right-to-delete 후 NULL
+		videoLifecycleExpiresAt: timestamp("video_lifecycle_expires_at", {
+			withTimezone: true,
+		}).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [
+		// 0005: race-safe — 같은 학생/같은 날짜 row 최대 1개
+		unique("evaluations_student_date_unique").on(t.studentId, t.evaluationDate),
+	],
+);
 
 // ─── ai_analyses (3 axes for v1) ───────────────────────────────────
 export const aiAnalyses = pgTable(

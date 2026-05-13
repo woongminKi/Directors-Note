@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
 import type { EscalationInput } from "@/lib/dashboard/escalation-rules";
+import { kstMonthLastDay } from "@/lib/datetime";
 import { db } from "@/lib/db/client";
 import {
 	academies,
@@ -294,10 +295,8 @@ export async function getAcademyMiniStats(
 	`);
 	const thisMonthCompleted = Number(monthCountRows[0]?.c ?? 0);
 
-	// v1: cycle deadline = 이번 달 마지막 날
-	const now = new Date();
-	const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-	const cycleDeadline = lastDay.toISOString().slice(0, 10);
+	// v1: cycle deadline = 이번 달 마지막 날 (KST 기준)
+	const cycleDeadline = kstMonthLastDay();
 
 	return {
 		academyName,

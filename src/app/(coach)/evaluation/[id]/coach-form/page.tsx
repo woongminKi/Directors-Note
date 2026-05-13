@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { kstToday } from "@/lib/datetime";
 import { db } from "@/lib/db/client";
 import { evaluations } from "@/lib/db/schema";
 import { CoachBulletForm } from "./form";
@@ -25,7 +26,7 @@ export default async function CoachBulletFormPage({ params }: PageProps) {
 	).student;
 	if (!student) notFound();
 
-	const today = new Date().toISOString().slice(0, 10);
+	const today = kstToday();
 	const featureFlag = process.env.FEATURE_AI_VIDEO_ANALYSIS ?? "false";
 
 	return (
