@@ -10,6 +10,7 @@
     "lint": "biome check src/",
     "format": "biome format --write src/",
     "test": "vitest",
+    "test:ci": "vitest run",
     "test:e2e": "playwright test",
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",

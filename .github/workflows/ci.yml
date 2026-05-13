@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint (biome)
+        run: bun run lint
+
+      - name: Typecheck (tsc)
+        run: bun run typecheck
+
+      - name: Unit + integration tests (vitest)
+        run: bun run test:ci
+        env:
+          # env.ts is validated at module load. CI doesn't reach a request
+          # path, but importing schema modules can pull in env.ts. Provide
+          # placeholder values that satisfy zod validation without leaking
+          # any real secrets. Real secrets live in .env.local (not in CI).
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          OPENAI_API_KEY: sk-ci-placeholder
+          KAKAO_OAUTH_CLIENT_ID: ci-placeholder
+          KAKAO_OAUTH_CLIENT_SECRET: ci-placeholder
+          SHARE_LINK_PEPPER: 0000000000000000000000000000000000000000000000000000000000000000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          FEATURE_AI_VIDEO_ANALYSIS: "false"
