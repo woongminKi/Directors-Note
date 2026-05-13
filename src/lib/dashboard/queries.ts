@@ -179,12 +179,11 @@ export async function getSentRecent(
 		.orderBy(desc(feedbackDrafts.sentAt))
 		.limit(limit);
 
-	// Data integrity: status='sent' implies sentAt IS NOT NULL by virtue of
-	// finalize-action.ts setting both together in one transaction. There is
-	// no DB-level CHECK enforcing this yet (TODO: add via future migration).
-	// We filter null rows and warn, rather than masking with `?? new Date()`
-	// (which silently surfaced bad rows at the top of the list ordered by
-	// sentAt DESC). Filtering keeps the UI honest.
+	// Data integrity: status='sent' implies sentAt IS NOT NULL — enforced
+	// at schema level by feedback_drafts_sent_at_consistency CHECK
+	// (migration 0004). Belt-and-braces filter retained: rows can never
+	// be null here under normal write paths, but the filter keeps the UI
+	// honest if a future direct-SQL migration inserts a bad row.
 	return rows
 		.filter((r) => {
 			if (r.sentAt === null) {

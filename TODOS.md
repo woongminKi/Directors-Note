@@ -2,6 +2,8 @@
 
 Deferred work tracked here. Source of truth for "do this later." Items grouped by trigger condition.
 
+> **Currently blocked on Kakao OAuth credentials + friend's first login.** See [`docs/oauth-handoff.md`](docs/oauth-handoff.md) for what credentials to collect and what runs after. When you bring credentials back, mention "OAuth handoff."
+
 ---
 
 ## After v1 ships AND first paying academy validates demand
