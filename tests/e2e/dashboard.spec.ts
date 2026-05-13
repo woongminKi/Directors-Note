@@ -16,10 +16,9 @@ test.describe("Dashboard (코치 view)", () => {
 
 	test("E2E-D3: 평가 시작 큐 row click → /students/:id", async ({ page }) => {
 		await page.goto("/dashboard");
-		const firstRow = page
-			.getByRole("link")
-			.filter({ hasText: /년차|^[가-힣]/ })
-			.first();
+		// Eval-todo queue rows link directly to /students/<uuid>. The nav has
+		// /students (no trailing slash), so the `/` after students disambiguates.
+		const firstRow = page.locator("a[href^='/students/']").first();
 		if (await firstRow.isVisible({ timeout: 2_000 }).catch(() => false)) {
 			await firstRow.click();
 			await expect(page).toHaveURL(/\/students\/[0-9a-f-]+/);

@@ -48,14 +48,22 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 
 - [x] **Playwright `storageState` fixture generation** → Option (c) cookie-direct shipped (commit `e2dad92`). `bun run e2e:auth-setup` writes `tests/.auth/{owner,coach}.json` via password-grant + `@supabase/ssr` cookie-value encoding. E2E specs run with `E2E_AUTH_READY=1 bun run test:e2e`. Production Kakao OAuth path untouched.
 
-## E2E test-selector follow-ups (2026-05-14)
+## E2E test-selector follow-ups (2026-05-14) — RESOLVED 3/4
 
-E2E auth is working but 4 specs fail on selector / flow assumptions unrelated to auth. Fix when E2E becomes the regression net (likely before academy #2 onboard).
+E2E auth working; 3 of 4 spec failures fixed in commits — E1 still skipped pending root-cause.
 
-- [ ] **E2E-D3** (`dashboard.spec.ts:17`): clicks first link with "년차"/Korean — picks up nav link `/students` instead of an eval-todo row. Tighten selector to scope inside the queue card.
-- [ ] **E2E-E1** (`review-send.spec.ts:5`): Approach-A flow end-to-end. Investigate — likely depends on a specific seed shape.
-- [ ] **E2E-S1** (`students.spec.ts:10`): owner adds student → expects H1 to contain "테스트 학생". Form submit likely redirects to `/students` (list) where H1 differs.
-- [ ] **E2E-S3** (`students.spec.ts:36`): archive modal flow. Selector `'[role="dialog"] button:has-text("보관")'` may not match new dialog structure.
+- [x] **E2E-D3** (`dashboard.spec.ts`): nav-link picked up by overly-permissive Korean-text regex → tightened to `a[href^='/students/']` (trailing slash disambiguates from nav `/students`).
+- [x] **E2E-S1** (`students.spec.ts`): missing storage at `describe` level → added `test.use({ storageState: "tests/.auth/owner.json" })`. Also surfaced the `year` schema bug (see new entry below); test now fills year explicitly + uses unique student name per run.
+- [x] **E2E-S3** (`students.spec.ts`): same storage-missing root cause + same year-required workaround. List assertion now matches `STUDENT_DELETED` prefix (archive action wipes name for PIPA).
+- [ ] **E2E-E1** (`review-send.spec.ts`): currently `test.skip(true)` with FIXME. Submit click on /coach-form doesn't trigger onSubmit under Playwright headless — no toast, no error, no nav. All 3 axes are filled per snapshot. Probably react-hook-form / Playwright `.fill()` timing (last field's onChange may not have flushed before button click). Worth re-investigating only when E2E becomes regression-critical.
+
+## Real product bug surfaced 2026-05-14
+
+- [ ] **student form `year` schema bug**: `z.string().min(1).max(20).optional()` paired with default value `""` rejects empty submissions with the cryptic zod default "Too small: expected string to have >=1 characters". Either:
+  (a) loosen schema: `z.string().min(1).max(20).optional().or(z.literal(""))` and map `""` to undefined before insert, or
+  (b) require year and show a Korean error message ("구분을 입력해 주세요"), or
+  (c) default to `undefined` (omitProperty) instead of `""` in the form's defaultValues so `.optional()` actually applies.
+  Current behavior: friend's UI shows English zod error, which is broken UX. Fix before friend onboarding (E1 archive flow exposed this; almost certainly hits the friend's first try too).
 
 ## Deferred from T14 review (2026-05-10) — RESOLVED 2026-05-14
 
