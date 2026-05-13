@@ -28,6 +28,11 @@ const ACADEMY_ID = "554c68ef-3244-44a3-96a1-397185ad41ea"; // 카타르시스 �
 const TEST_OWNER_EMAIL = "dev-owner@catharsis.test";
 const TEST_COACH_EMAIL = "dev-coach@catharsis.test";
 
+// Dev-only password — lets `bun run e2e:auth-setup` mint E2E storageState
+// fixtures via Supabase's password grant. Production Kakao OAuth flow is
+// unaffected. NEVER reuse this on a non-dev account.
+const DEV_PASSWORD = "Catharsis-dev-2026!";
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -68,9 +73,16 @@ async function ensureAuthUser(
 	fullName: string,
 ): Promise<string> {
 	const existing = await findAuthUserByEmail(email);
-	if (existing) return existing;
+	if (existing) {
+		// Refresh password each run so e2e:auth-setup can always sign in.
+		await supabase.auth.admin.updateUserById(existing, {
+			password: DEV_PASSWORD,
+		});
+		return existing;
+	}
 	const { data, error } = await supabase.auth.admin.createUser({
 		email,
+		password: DEV_PASSWORD,
 		email_confirm: true,
 		user_metadata: { full_name: fullName, provider: "dev-seed" },
 	});

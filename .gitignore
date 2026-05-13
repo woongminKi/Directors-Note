@@ -41,6 +41,7 @@ yarn-error.log*
 /test-results/
 /playwright-report/
 /playwright/.cache/
+/tests/.auth/*.json
 
 # Supabase local
 /supabase/.temp/
