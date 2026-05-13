@@ -47,14 +47,12 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 - [x] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string. → Replaced by `kstToday()` in `src/lib/datetime.ts`. Also applied to `dashboard/queries.ts:cycleDeadline` and `coach-form/page.tsx:today` (same bug pattern).
 - [x] **Race condition**: No `UNIQUE(student_id, evaluation_date)` constraint on `evaluations` table. Double-submit during start-evaluation creates duplicate rows. Add migration 0005 + `.onConflictDoNothing()` in `startEvaluation`. → Migration `0005_evaluations_unique_per_day.sql` applied; `startEvaluation` uses `.onConflictDoNothing({ target: [studentId, evaluationDate] })` with re-fetch-on-conflict fallback. Behavior change: sent-same-day path now resumes the sent row instead of creating a new one (one eval per student per day).
 
-## Deferred from dashboard final review (2026-05-12) — partially resolved
+## Deferred from dashboard final review (2026-05-12) — RESOLVED 2026-05-13/14
 
 F1-F7 (code fixes) shipped 2026-05-12 in commits `2ef2579`, `df6f7b9`, `91dd9df`, `ef843e9`, `9d277f0`, `e45396e`.
 
-Remaining items:
-
-- [ ] **`students.year` migration apply** (operator action): `migrations/0003_students_year.sql.draft` still draft. Dashboard queries reference the column. Without applying, runtime fails with "column does not exist." Apply via `mv 0003_students_year.sql.draft 0003_students_year.sql && supabase db push`. (Same item as the existing operator-actions list.)
-- [ ] **Postgres CHECK for `status='sent' → sentAt IS NOT NULL`**: F7 added a runtime filter + console.warn in `getSentRecent`, but the DB still lets the invariant break. Add a migration with `CHECK ((status <> 'sent') OR (sent_at IS NOT NULL))` so the constraint is enforced at the schema level.
+- [x] **`students.year` migration apply** (operator action) → Migration 0003 applied 2026-05-13 via MCP `apply_migration` (commit `35768ed`). Column now exists; dashboard queries no longer fail.
+- [x] **Postgres CHECK for `status='sent' → sentAt IS NOT NULL`** → Migration 0004 applied 2026-05-13. Constraint `feedback_drafts_sent_at_consistency` enforces the invariant at schema level (commit `35768ed`). F7 runtime filter remains as belt-and-braces.
 
 ## Implementation complete (2026-05-10)
 
@@ -73,9 +71,10 @@ All 32 tasks from `docs/superpowers/plans/2026-05-10-student-eval-letter-flow.md
 - 10 (Cleanup): T32 — verify dev bypass + signup gone + seed guards
 
 **Pending operator actions (NOT code tasks):**
-- Apply migration `0003_students_year.sql.draft` to dev Supabase via `mv ... .sql && supabase db push`.
+- ~~Apply migration `0003_students_year.sql.draft` to dev Supabase~~ → done 2026-05-13 (commit `35768ed`).
+- ~~Generate real `SHARE_LINK_PEPPER` via `openssl rand -base64 48` and set in `.env.local`~~ → already set (64-char hex, 256-bit) per `.env.local` audit 2026-05-14.
 - Configure Kakao OAuth in Supabase Auth dashboard (provider settings + redirect URL).
-- Generate real `SHARE_LINK_PEPPER` via `openssl rand -base64 48` and set in `.env.local`.
-- Set `NEXT_PUBLIC_APP_URL` to production domain.
+- Set `NEXT_PUBLIC_APP_URL` to production domain (currently `http://localhost:3000` for dev).
 - Create Supabase Storage bucket `student-videos` with appropriate policies (only when `FEATURE_AI_VIDEO_ANALYSIS=true`).
-- Verify pre-invited users can complete Kakao OAuth round-trip (T30 caveat — auth.users.id may differ across providers).
+- Verify pre-invited users can complete Kakao OAuth round-trip (T30 caveat — auth.users.id may differ across providers). Test after friend's first OAuth login.
+- (Hardening, deferred) Restore `--read-only` flag on supabase MCP in `~/.claude.json` — already done 2026-05-14, takes effect next session restart.
