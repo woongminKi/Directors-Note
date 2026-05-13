@@ -15,6 +15,13 @@ export function kstToday(now: Date = new Date()): string {
 	return KST_FORMATTER.format(now);
 }
 
+export function kstMonthFirst(now: Date = new Date()): string {
+	const parts = KST_PARTS_FORMATTER.formatToParts(now);
+	const year = parts.find((p) => p.type === "year")?.value;
+	const month = parts.find((p) => p.type === "month")?.value;
+	return `${year}-${month}-01`;
+}
+
 export function kstMonthLastDay(now: Date = new Date()): string {
 	const parts = KST_PARTS_FORMATTER.formatToParts(now);
 	const year = Number(parts.find((p) => p.type === "year")?.value);

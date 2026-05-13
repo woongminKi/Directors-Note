@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
 import type { EscalationInput } from "@/lib/dashboard/escalation-rules";
-import { kstMonthLastDay } from "@/lib/datetime";
+import { kstMonthFirst, kstMonthLastDay } from "@/lib/datetime";
 import { db } from "@/lib/db/client";
 import {
 	academies,
@@ -73,6 +73,7 @@ export async function getEvaluationTodo(
 		year: string | null;
 		last_grade: InternalGrade | null;
 	};
+	const monthFirst = kstMonthFirst();
 	const rows = await db.execute<Row>(sql`
 		WITH last_grade AS (
 			SELECT DISTINCT ON (e.student_id)
@@ -85,7 +86,7 @@ export async function getEvaluationTodo(
 		this_month AS (
 			SELECT student_id FROM evaluations
 			WHERE academy_id = ${academyId}
-			  AND evaluation_date >= date_trunc('month', now())
+			  AND evaluation_date >= ${monthFirst}::date
 		)
 		SELECT
 			s.id::text AS student_id,
@@ -221,6 +222,7 @@ export async function getOwnerCoachProgress(
 		sent: number;
 		total_students: number;
 	};
+	const monthFirst = kstMonthFirst();
 	const rows = await db.execute<Row>(sql`
 		WITH total_students AS (
 			SELECT COUNT(*) AS c FROM students
@@ -230,15 +232,15 @@ export async function getOwnerCoachProgress(
 			u.id::text AS user_id,
 			u.email,
 			COUNT(DISTINCT e.id) FILTER (
-				WHERE e.evaluation_date >= date_trunc('month', now())
+				WHERE e.evaluation_date >= ${monthFirst}::date
 			) AS completed,
 			COUNT(DISTINCT fd.id) FILTER (
 				WHERE fd.status = 'draft'
-				  AND e.evaluation_date >= date_trunc('month', now())
+				  AND e.evaluation_date >= ${monthFirst}::date
 			) AS pending,
 			COUNT(DISTINCT fd.id) FILTER (
 				WHERE fd.status = 'sent'
-				  AND e.evaluation_date >= date_trunc('month', now())
+				  AND e.evaluation_date >= ${monthFirst}::date
 			) AS sent,
 			(SELECT c FROM total_students) AS total_students
 		FROM users u
@@ -287,11 +289,12 @@ export async function getAcademyMiniStats(
 		);
 	const totalStudents = studentRows[0]?.c ?? 0;
 
+	const monthFirst = kstMonthFirst();
 	const monthCountRows = await db.execute<{ c: number }>(sql`
 		SELECT COUNT(DISTINCT student_id)::int AS c
 		FROM evaluations
 		WHERE academy_id = ${academyId}
-		  AND evaluation_date >= date_trunc('month', now())
+		  AND evaluation_date >= ${monthFirst}::date
 	`);
 	const thisMonthCompleted = Number(monthCountRows[0]?.c ?? 0);
 
