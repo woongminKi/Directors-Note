@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { countKoreanChars } from "@/lib/korean-letter";
+import { cn } from "@/lib/utils";
 
 interface KoreanCharCounterProps {
 	value: string;
@@ -14,7 +14,11 @@ interface KoreanCharCounterProps {
  * - 공백/줄바꿈 제외 visible 글자만 카운트.
  * - max 의 90% 초과 시 amber, 100% 초과 시 destructive (textarea maxLength 가 차단하므로 100% 가 한계).
  */
-export function KoreanCharCounter({ value, max, className }: KoreanCharCounterProps) {
+export function KoreanCharCounter({
+	value,
+	max,
+	className,
+}: KoreanCharCounterProps) {
 	const count = countKoreanChars(value);
 	const ratio = count / max;
 	const tone = ratio > 1 ? "destructive" : ratio > 0.9 ? "warn" : "muted";

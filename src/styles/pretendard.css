@@ -7,6 +7,7 @@
 }
 
 :root {
-	--font-pretendard: "Pretendard", -apple-system, "Apple SD Gothic Neo",
-		"Segoe UI", Roboto, sans-serif;
+	--font-pretendard:
+		"Pretendard", -apple-system, "Apple SD Gothic Neo", "Segoe UI", Roboto,
+		sans-serif;
 }

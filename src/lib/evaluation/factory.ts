@@ -17,7 +17,8 @@ export function createVideoAnalysisService(): VideoAnalysisService {
 	}
 
 	const isDev = process.env.NODE_ENV === "development";
-	const hasVertex = !!env.GOOGLE_VERTEX_PROJECT_ID && !!env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+	const hasVertex =
+		!!env.GOOGLE_VERTEX_PROJECT_ID && !!env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 
 	if (isDev && !hasVertex) {
 		return new StubVideoAnalysisService();

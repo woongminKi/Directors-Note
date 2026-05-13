@@ -71,13 +71,17 @@ export class StubVideoAnalysisService implements VideoAnalysisService {
 	}
 
 	private fakeGrade(seed: number): "A" | "B" | "C" | "D" {
-		const grades: Array<"A" | "B" | "C" | "D"> = ["A", "B", "C", "D"];
-		return grades[seed % 4]!;
+		const grades = ["A", "B", "C", "D"] as const;
+		return grades[seed % 4];
 	}
 
 	private fakeMatches(seed: number, academyId: string): ReferenceMatch[] {
-		const tiers: Array<"A" | "B" | "C" | "D"> = ["A", "B", "C", "D"];
-		const sceneTypes = ["classical_monologue", "modern_monologue", "improv"];
+		const tiers = ["A", "B", "C", "D"] as const;
+		const sceneTypes = [
+			"classical_monologue",
+			"modern_monologue",
+			"improv",
+		] as const;
 		// UUID-shaped fake IDs (RFC4122 v4 형식 준수)
 		const baseHex = (n: number) =>
 			((n * 0xdeadbeef) >>> 0).toString(16).padStart(8, "0");
@@ -88,8 +92,8 @@ export class StubVideoAnalysisService implements VideoAnalysisService {
 				.slice(-3)}`;
 		return [0, 1, 2].map((i) => ({
 			referenceVideoId: fakeUuid(i + Math.abs(this.hashAcademy(academyId))),
-			tier: tiers[(seed + i) % 4]!,
-			sceneType: sceneTypes[i % 3]!,
+			tier: tiers[(seed + i) % 4],
+			sceneType: sceneTypes[i % 3],
 			cosineScore: Math.max(
 				0,
 				Math.min(1, 0.95 - i * 0.07 - (seed % 5) * 0.01),

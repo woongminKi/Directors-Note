@@ -1,5 +1,5 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /**
  * D8 graceful degrade 배너.
@@ -19,7 +19,9 @@ export function DegradeBanner({
 		<Alert className="bg-amber-50 border-amber-300 text-amber-900">
 			<AlertTriangle className="size-4 text-amber-700" />
 			<AlertTitle className="text-amber-900">AI 영상 분석 사용 불가</AlertTitle>
-			<AlertDescription className="text-amber-900/90">{message}</AlertDescription>
+			<AlertDescription className="text-amber-900/90">
+				{message}
+			</AlertDescription>
 		</Alert>
 	);
 }

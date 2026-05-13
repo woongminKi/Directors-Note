@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
+import type * as LabelPrimitive from "@radix-ui/react-label";
 import { Slot } from "@radix-ui/react-slot";
+import * as React from "react";
 import {
 	Controller,
 	type ControllerProps,
@@ -12,8 +12,8 @@ import {
 	useFormContext,
 	useFormState,
 } from "react-hook-form";
-import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 const Form = FormProvider;
 
@@ -76,7 +76,11 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 	const id = React.useId();
 	return (
 		<FormItemContext.Provider value={{ id }}>
-			<div data-slot="form-item" className={cn("grid gap-2", className)} {...props} />
+			<div
+				data-slot="form-item"
+				className={cn("grid gap-2", className)}
+				{...props}
+			/>
 		</FormItemContext.Provider>
 	);
 }
@@ -98,13 +102,16 @@ function FormLabel({
 }
 
 function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
-	const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
+	const { error, formItemId, formDescriptionId, formMessageId } =
+		useFormField();
 	return (
 		<Slot
 			data-slot="form-control"
 			id={formItemId}
 			aria-describedby={
-				!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`
+				!error
+					? `${formDescriptionId}`
+					: `${formDescriptionId} ${formMessageId}`
 			}
 			aria-invalid={!!error}
 			{...props}
@@ -141,12 +148,12 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
 }
 
 export {
-	useFormField,
 	Form,
-	FormItem,
-	FormLabel,
 	FormControl,
 	FormDescription,
-	FormMessage,
 	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+	useFormField,
 };

@@ -3,7 +3,9 @@ import { z } from "zod";
 export const coachBulletFormSchema = z
 	.object({
 		studentId: z.string().uuid("학생 ID 형식 오류"),
-		evaluationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식 필요"),
+		evaluationDate: z
+			.string()
+			.regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식 필요"),
 		year: z.string().min(1).max(20),
 		bullets: z.object({
 			vocal: z.string().max(200).optional(),
