@@ -48,7 +48,7 @@ Key routing rules:
 **Hard gates:**
 - Week-2 calibration kill-criterion (≥7/10 tier match on non-student data per D13) — fail 시 LLM-as-judge 로 primary 전환
 - Week-6 revenue gate — 페이드 학원 0이면 Approach-A fallback 으로 ship
-- D6 PIPA gate — 변호사 의견 받기 전엔 Vertex 코드 X, 마이그레이션 X
+- D6 PIPA gate — 변호사 의견 받기 전엔 Vertex multimodal embedding 코드 X, 생체정보(얼굴/음성 embedding) 관련 schema/마이그레이션 X. (일반 schema 변경 — 컬럼 추가, CHECK constraint, RLS 등 — 은 제외.)
 - P2 — AI grade 부모 surface 노출 절대 금지 (코치 only)
 - P3 — B2B seat pricing only, 부모 paywall X
 
