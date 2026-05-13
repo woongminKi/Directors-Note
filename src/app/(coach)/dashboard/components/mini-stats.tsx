@@ -1,14 +1,18 @@
+import { kstToday } from "@/lib/datetime";
+
 interface Props {
 	totalStudents: number;
 	thisMonthCompleted: number;
-	cycleDeadline: string; // ISO YYYY-MM-DD
+	cycleDeadline: string; // ISO YYYY-MM-DD, KST calendar date
 }
 
+// Calendar-day diff (KST). Both inputs are treated as midnight UTC purely as
+// a reference point — the diff is invariant under that choice. Avoids the
+// `new Date('YYYY-MM-DD')` server-vs-client timezone trap.
 function daysUntil(iso: string): number {
-	const target = new Date(`${iso}T00:00:00`).getTime();
-	const now = Date.now();
-	const ms = target - now;
-	return Math.ceil(ms / (1000 * 60 * 60 * 24));
+	const today = new Date(`${kstToday()}T00:00:00Z`).getTime();
+	const target = new Date(`${iso}T00:00:00Z`).getTime();
+	return Math.round((target - today) / (1000 * 60 * 60 * 24));
 }
 
 export function MiniStats({
