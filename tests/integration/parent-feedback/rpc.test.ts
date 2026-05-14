@@ -26,6 +26,7 @@ describe.skipIf(skip)("get_parent_feedback RPC", () => {
 		const supabase = createServiceRoleClient();
 		const { data, error } = await supabase.rpc("get_parent_feedback", {
 			p_token: "definitely-not-a-real-token",
+			p_pepper: "bogus-pepper-for-test",
 		});
 		expect(error).toBeNull();
 		expect(data ?? []).toHaveLength(0);

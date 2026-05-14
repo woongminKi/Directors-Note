@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { ExpiredOrInvalid } from "./expired-or-invalid";
 import { ParentReportCard } from "./parent-report-card";
@@ -13,6 +14,7 @@ export default async function ParentFeedbackPage({
 	const supabase = createServiceRoleClient();
 	const { data, error } = await supabase.rpc("get_parent_feedback", {
 		p_token: token,
+		p_pepper: env.SHARE_LINK_PEPPER,
 	});
 
 	if (error || !data || (Array.isArray(data) && data.length === 0)) {
