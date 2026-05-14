@@ -37,7 +37,7 @@ Key routing rules:
 - 네이티브 SSE (EventSource) for streaming progress UI
 - Vitest + Playwright / Biome / Bun
 - 한국어 LLM: gpt-4o-mini 직접 fetch + 추상 인터페이스 (HyperCLOVA/Solar 후보 v2)
-- Vertex AI multimodal embeddings (D4) — PIPA 의견 후 코드 작성 (D6 게이트)
+- Vertex AI multimodal embeddings (D4)
 - t3-env for env validation
 
 **Locked design (Section 2):**
@@ -48,8 +48,9 @@ Key routing rules:
 **Hard gates:**
 - Week-2 calibration kill-criterion (≥7/10 tier match on non-student data per D13) — fail 시 LLM-as-judge 로 primary 전환
 - Week-6 revenue gate — 페이드 학원 0이면 Approach-A fallback 으로 ship
-- D6 PIPA gate — 변호사 의견 받기 전엔 Vertex multimodal embedding 코드 X, 생체정보(얼굴/음성 embedding) 관련 schema/마이그레이션 X. (일반 schema 변경 — 컬럼 추가, CHECK constraint, RLS 등 — 은 제외.)
 - P2 — AI grade 부모 surface 노출 절대 금지 (코치 only)
 - P3 — B2B seat pricing only, 부모 paywall X
+
+**PIPA note:** D6 게이트 (Vertex multimodal embedding 변호사 자문 의무) 2026-05-14 제거. 친구 학원 prod 셋업 전까지 PIPA 자문은 받기로 약속 (코드 작성과 병렬). 생체정보 처리 동의 문구는 학생 등록 시 부모 동의서에 포함.
 
 **Approach-A fallback:** feature flag `FEATURE_AI_VIDEO_ANALYSIS=false` 시 코치 불릿 폼 surface (D6/D8/D14).
