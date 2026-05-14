@@ -2,8 +2,8 @@ type Feedback = {
 	coach_edited_text: string;
 	student_name: string;
 	academy_name: string;
-	coach_email: string;
-	eval_date: string;
+	coach_display_name: string;
+	evaluation_date: string;
 };
 
 export function ParentReportCard({ feedback }: { feedback: Feedback }) {
@@ -16,7 +16,7 @@ export function ParentReportCard({ feedback }: { feedback: Feedback }) {
 
 				<div className="rounded-lg bg-background p-4 shadow-sm">
 					<p className="text-xs text-muted-foreground">평가일</p>
-					<p className="font-semibold">{feedback.eval_date}</p>
+					<p className="font-semibold">{feedback.evaluation_date}</p>
 					<p className="text-xs text-muted-foreground mt-3">학생</p>
 					<p className="font-semibold">{feedback.student_name}</p>
 				</div>
@@ -30,7 +30,7 @@ export function ParentReportCard({ feedback }: { feedback: Feedback }) {
 
 				<div className="rounded-lg bg-background p-4 shadow-sm text-sm">
 					<p className="text-muted-foreground">작성</p>
-					<p className="font-medium">{feedback.coach_email}</p>
+					<p className="font-medium">{feedback.coach_display_name} 드림</p>
 				</div>
 
 				<footer className="text-center text-xs text-muted-foreground space-y-1 pt-4">

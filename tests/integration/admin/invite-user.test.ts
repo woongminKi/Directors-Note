@@ -44,6 +44,7 @@ describe("inviteUser", () => {
 			email: "taken@example.com",
 			academyId: "acad-1",
 			role: "coach",
+			displayName: null,
 			kakaoId: null,
 			createdAt: new Date(),
 			updatedAt: new Date(),

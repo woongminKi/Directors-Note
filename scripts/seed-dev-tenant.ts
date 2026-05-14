@@ -130,18 +130,21 @@ async function main() {
 				academyId: ACADEMY_ID,
 				role: "owner",
 				email: TEST_OWNER_EMAIL,
+				displayName: "원장",
 			},
 			{
 				id: coachId,
 				academyId: ACADEMY_ID,
 				role: "coach",
 				email: TEST_COACH_EMAIL,
+				displayName: "코치",
 			},
 		])
 		.onConflictDoUpdate({
 			target: users.id,
 			set: {
 				academyId: ACADEMY_ID,
+				displayName: sql`EXCLUDED.display_name`,
 				updatedAt: new Date(),
 			},
 		});

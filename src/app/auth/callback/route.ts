@@ -47,5 +47,17 @@ export async function GET(request: Request) {
 		return NextResponse.redirect(new URL("/auth/not-invited", url.origin), 307);
 	}
 
+	const meta = data.user.user_metadata ?? {};
+	const metaName =
+		(typeof meta.name === "string" && meta.name.trim()) ||
+		(typeof meta.full_name === "string" && meta.full_name.trim()) ||
+		null;
+	if (metaName && row.displayName !== metaName) {
+		await db
+			.update(users)
+			.set({ displayName: metaName, updatedAt: new Date() })
+			.where(eq(users.id, row.id));
+	}
+
 	return NextResponse.redirect(new URL(next, url.origin), 307);
 }
