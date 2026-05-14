@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { kstToday } from "@/lib/datetime";
 import {
 	getRecentEvaluationsForStudent,
 	getStudent,
@@ -33,7 +34,7 @@ export default async function StudentDetailPage({
 			<p className="text-sm text-muted-foreground mb-4">
 				{student.year ?? "구분 미입력"} ·{" "}
 				{student.parentConsentOnFileAt
-					? `동의 ✓ ${new Date(student.parentConsentOnFileAt).toLocaleDateString()}`
+					? `동의 ✓ ${kstToday(new Date(student.parentConsentOnFileAt))}`
 					: "동의 미제출"}
 			</p>
 			<StartEvaluationButton studentId={student.id} disabled={!canEvaluate} />

@@ -37,7 +37,8 @@ export function ArchiveConfirm({ studentId }: { studentId: string }) {
 					<DialogTitle>학생을 보관하시겠습니까?</DialogTitle>
 				</DialogHeader>
 				<p className="text-sm text-muted-foreground">
-					이 작업은 되돌릴 수 없습니다.
+					보관된 학생은 평가에서 제외되며, '보관됨' 필터에서 다시 확인할 수
+					있습니다.
 				</p>
 				<DialogFooter>
 					<Button variant="ghost" onClick={() => setOpen(false)}>

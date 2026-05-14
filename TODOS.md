@@ -2,7 +2,7 @@
 
 Deferred work tracked here. Source of truth for "do this later." Items grouped by trigger condition.
 
-> **Currently blocked on Kakao OAuth credentials + friend's first login.** See [`docs/oauth-handoff.md`](docs/oauth-handoff.md) for what credentials to collect and what runs after. When you bring credentials back, mention "OAuth handoff."
+> **Status 2026-05-14:** Kakao OAuth working (kiwoongmin's own account seeded as 카타르시스 owner for dogfooding). A3 walkthrough completed (eval start → bullet form → AI letter → review/send → parent share-link). A3 surfaced 6 bugs, all resolved in commits `e33610f` / `5e40652` / `775a549` / pending. Next: production deploy decisions (C1/C2/C3) + real friend onboarding (Kakao account_email approval status pending).
 
 ---
 
@@ -61,6 +61,25 @@ E2E auth working; 3 of 4 spec failures fixed in commits — E1 still skipped pen
 
 - [x] **student form `year` schema bug**: previously `z.string().min(1).max(20).optional()` rejected empty submissions with zod's English default. Resolved: dropped `.min(1)` (the data model is nullable text, no minimum required), added Korean message on `.max(20)`, and introduced `normalizeYear()` in `src/lib/students/schema.ts` — actions call it before insert so blank/whitespace lands as `null`. Friend's UI now accepts blank year; tests in `schema.test.ts` cover empty string + normalizer edges.
 
+## A3 dogfooding bug list (2026-05-14, kiwoongmin Kakao OAuth → 카타르시스 owner)
+
+Real end-to-end walkthrough: start eval (이서준) → bullet form → AI letter → review/edit → send → parent share-link → 박지우 cross-coach access.
+
+- [x] **Home `/` stub preview links** — `src/app/page.tsx` was the pre-auth dev stub linking to `/evaluation/preview-id/coach-form` (literal placeholder). Real session hit it, Postgres exploded with `invalid input syntax for type uuid: "preview-id"`. Fix: `/` redirects logged-in → `/dashboard`, otherwise → `/login`. Commit `e33610f`.
+- [x] **share-link pepper via Postgres GUC** — `get_parent_feedback()` used `current_setting('app.share_link_pepper')` which is always NULL on Supabase (platform blocks `app.*` GUC SET regardless of role; `ALTER DATABASE` / `ALTER FUNCTION` / `ALTER ROLE` all fail 42501). Fix: pepper becomes a function arg passed by Next.js service-role handler. Migration 0006. Commit `5e40652`. Future: migrate to Supabase Vault during prod cutover.
+- [x] **parent card `evaluation_date` blank** — type defined `eval_date` but RPC returned `evaluation_date`; React rendered `undefined` → empty line. Rename. Commit `775a549`.
+- [x] **coach email PII on parent surface** — share-link card displayed raw coach email (`dev-coach@catharsis.test`). Replaced with `users.display_name` (migration 0007), surfaced as "{name} 드림" with `coalesce(display_name, '담당 선생님')` fallback (migration 0008). Auth callback backfills `display_name` from `auth.users.user_metadata.name` on every login when it differs. Seed script populates 원장/코치 for dev fixtures. Existing kiwoongmin row backfilled to '웅' inline. Commit `775a549`.
+- [x] **archive dialog false claim** — "이 작업은 되돌릴 수 없습니다" but `archiveStudent` is a soft-delete (sets `soft_deleted_at`), reversible via the 보관됨 filter. Rewrote message to match actual behavior. (pending commit)
+- [x] **student detail consent date uses server locale** — `toLocaleDateString()` without locale arg renders inconsistently per server. Switched to `kstToday(date)` for KST `YYYY-MM-DD`. (pending commit)
+- [x] **/privacy route 404** — parent share-link footer linked to `/privacy` but no such route. Removed the link for now; real privacy policy page must be drafted (with lawyer) before parent surface goes live. See "Pending operator actions" below for the follow-up. (pending commit)
+
+## Pre-friend-onboarding shipping requirements (2026-05-14)
+
+Must complete before friend's first parent share-link is sent to a real parent.
+
+- [ ] **Privacy policy page** — draft a real `/privacy` page (PIPA-compliant Korean text). Lawyer review desirable; minimum viable: data collected, retention period, contact for revocation, third-party sub-processors (Supabase, OpenAI, Vercel). Re-add the footer link in `src/app/feedback/[token]/parent-report-card.tsx` once drafted.
+- [ ] **Production deploy decisions C1/C2/C3** — see `docs/production-deploy-plan.md`. Three choices owed: (1) split-prod-Supabase before-or-after friend's first OAuth, (2) custom-domain vs vercel.app subdomain, (3) Kakao app strategy (single vs multi). Without these, ship is on dev infra.
+
 ## Deferred from T14 review (2026-05-10) — RESOLVED 2026-05-14
 
 - [x] **Timezone fix**: `src/lib/evaluations/start-action.ts` `todayISO()` uses UTC. KST coaches creating evaluations between 00:30–09:00 KST will see wrong date. Replace with `Asia/Seoul`-aware today string. → Replaced by `kstToday()` in `src/lib/datetime.ts`. Also applied to `dashboard/queries.ts:cycleDeadline` and `coach-form/page.tsx:today` (same bug pattern).
@@ -92,8 +111,8 @@ All 32 tasks from `docs/superpowers/plans/2026-05-10-student-eval-letter-flow.md
 **Pending operator actions (NOT code tasks):**
 - ~~Apply migration `0003_students_year.sql.draft` to dev Supabase~~ → done 2026-05-13 (commit `35768ed`).
 - ~~Generate real `SHARE_LINK_PEPPER` via `openssl rand -base64 48` and set in `.env.local`~~ → already set (64-char hex, 256-bit) per `.env.local` audit 2026-05-14.
-- Configure Kakao OAuth in Supabase Auth dashboard (provider settings + redirect URL).
-- Set `NEXT_PUBLIC_APP_URL` to production domain (currently `http://localhost:3000` for dev).
+- ~~Configure Kakao OAuth in Supabase Auth dashboard (provider settings + redirect URL)~~ → done 2026-05-14; kiwoongmin's account verified end-to-end (OAuth → callback → Phase 2 seed → dashboard → eval → send → share-link).
+- Set `NEXT_PUBLIC_APP_URL` to production domain (currently `http://localhost:3000` for dev). Tied to C2 (prod deploy decision).
 - Create Supabase Storage bucket `student-videos` with appropriate policies (only when `FEATURE_AI_VIDEO_ANALYSIS=true`).
 - Verify pre-invited users can complete Kakao OAuth round-trip (T30 caveat — auth.users.id may differ across providers). Test after friend's first OAuth login.
 - (Hardening, deferred) Restore `--read-only` flag on supabase MCP in `~/.claude.json` — already done 2026-05-14, takes effect next session restart.
