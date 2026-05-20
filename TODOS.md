@@ -2,7 +2,9 @@
 
 Deferred work tracked here. Source of truth for "do this later." Items grouped by trigger condition.
 
-> **Status 2026-05-14:** Kakao OAuth working (kiwoongmin's own account seeded as 카타르시스 owner for dogfooding). A3 walkthrough completed (eval start → bullet form → AI letter → review/send → parent share-link). A3 surfaced 6 bugs, all resolved in commits `e33610f` / `5e40652` / `775a549` / pending. Next: production deploy decisions (C1/C2/C3) + real friend onboarding (Kakao account_email approval status pending).
+> **Status 2026-05-21:** Approach-B (Vertex multimodal embedding) 코드 경로 ready. GCP/Vertex 자격증명 셋업 + `VertexVideoAnalysisService` 실구현 (`6efbb47`) + reference video 시드 스크립트 (`7457b27`). 8 commits origin/main 푸시. 남은 외부 액션 3개 — migration 0010 적용 / Vertex smoke test (~0.001 USD) / 친구 학원 reference 영상 촬영. Migration 미적용 또는 reference 영상 0개면 Vertex 호출 시 D8 degrade.
+>
+> **Status 2026-05-14:** Kakao OAuth working (kiwoongmin's own account seeded as 카타르시스 owner for dogfooding). A3 walkthrough completed. A3 6 bugs all resolved (`e33610f` / `5e40652` / `775a549` / `13d9882`). D6 PIPA 게이트 제거, student-videos Storage bucket + RLS 셋업.
 
 ---
 
@@ -79,6 +81,17 @@ Must complete before friend's first parent share-link is sent to a real parent.
 
 - [ ] **Privacy policy page** — draft a real `/privacy` page (PIPA-compliant Korean text). Lawyer review desirable; minimum viable: data collected, retention period, contact for revocation, third-party sub-processors (Supabase, OpenAI, Vercel). Re-add the footer link in `src/app/feedback/[token]/parent-report-card.tsx` once drafted.
 - [ ] **Production deploy decisions C1/C2/C3** — see `docs/production-deploy-plan.md`. Three choices owed: (1) split-prod-Supabase before-or-after friend's first OAuth, (2) custom-domain vs vercel.app subdomain, (3) Kakao app strategy (single vs multi). Without these, ship is on dev infra.
+
+## Vertex Approach-B follow-ups (2026-05-21)
+
+`VertexVideoAnalysisService` 와 reference seed 스크립트는 ship됐지만 실제 작동 verify 안 됨. 아래 3개 외부 액션이 unblock 조건.
+
+- [ ] **Migration 0010 적용** — `migrations/0010_cosine_search_references.sql` 의 `search_reference_matches` RPC. Supabase MCP read-only + harness 차단으로 자동 apply 안 됨. **사용자 액션:** Supabase SQL Editor 에서 파일 내용 Run (1분). 미적용 상태에서 Vertex 호출하면 `function search_reference_matches does not exist` → D8 degrade.
+- [ ] **Vertex smoke test 실행** — `bun --env-file=.env.local run vertex:smoke-test ./sample.mp4`. OAuth → GCS upload → Vertex predict → cleanup 풀 경로 검증. 비용 ~0.001 USD. 처음 호출은 응답 10-30초.
+- [ ] **친구 학원 reference 영상 촬영 + 시드** — Vertex cosine 매칭이 의미있게 동작하려면 academy 당 reference 10-20개 필요. 영상 확보 후: `bun --env-file=.env.local run seed:reference-video --academy <uuid> --tier <A|B|C|D> --scene-type <type> --file <path>`. 학원당 1-2 cents.
+- [ ] **GCP 서비스 계정 키 sync 위험 회피** — 키 파일이 `~/Desktop/gcp-keys/directors-note-vertex.json` 에 있음. iCloud Drive Desktop & Documents 동기화 켜져있으면 클라우드 노출. **사용자 액션:** `mv ~/Desktop/gcp-keys ~/.gcp-keys && sed -i.bak "s|~/Desktop/gcp-keys|~/.gcp-keys|g" .env.local`... 실제로는 `.env.local` 의 `GOOGLE_APPLICATION_CREDENTIALS_JSON` 은 키 파일 경로가 아니라 inlined JSON 이므로 파일만 옮기면 OK. 친구 prod 셋업 전까지.
+- [ ] **D12 LLM-as-judge escalation 와이어링** — `shouldEscalateToJudge()` 헬퍼만 작성, caller 경로 미연결. cosine 신뢰도 낮은 (`top1 < 0.70` 또는 `gap < 0.05`) 경우 GPT-4 또는 Claude 로 escalate. v1 후순위. Trigger: 첫 실 evaluation 에서 cosine 분포 확인 후.
+- [ ] **V1 axes 한계 해결** — 단일 영상 embedding 으로 vocal/expression/examReadiness 분리 측정 불가, 셋 다 동일 점수. 학원당 axis-별 reference embedding 시드 (vocal 강조 영상 셋, expression 강조 영상 셋 ...) 시 분리 가능. Trigger: 친구 학원에서 axis 별 다른 점수 요구할 때.
 
 ## Deferred from T14 review (2026-05-10) — RESOLVED 2026-05-14
 
