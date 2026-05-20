@@ -17,7 +17,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed-dev": "bun run scripts/seed-dev-tenant.ts",
     "letter-quality-check": "bun run scripts/letter-quality-check.ts",
-    "e2e:auth-setup": "bun run scripts/save-e2e-storage-state.ts"
+    "e2e:auth-setup": "bun run scripts/save-e2e-storage-state.ts",
+    "vertex:smoke-test": "bun run scripts/vertex-smoke-test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -33,6 +34,7 @@
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
+    "google-auth-library": "^10.6.2",
     "lucide-react": "^1.14.0",
     "next": "16.2.6",
     "next-themes": "^0.4.6",

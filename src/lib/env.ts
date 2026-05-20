@@ -9,6 +9,7 @@ export const env = createEnv({
 		GOOGLE_VERTEX_PROJECT_ID: z.string().optional(),
 		GOOGLE_VERTEX_LOCATION: z.string().default("asia-northeast1"),
 		GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
+		GCS_VIDEO_BUCKET: z.string().optional(),
 		KAKAO_OAUTH_CLIENT_ID: z.string().min(1),
 		KAKAO_OAUTH_CLIENT_SECRET: z.string().min(1),
 		SHARE_LINK_PEPPER: z.string().regex(/^[a-f0-9]{64}$/, "32-byte hex 필요"),
@@ -27,6 +28,7 @@ export const env = createEnv({
 		GOOGLE_VERTEX_LOCATION: process.env.GOOGLE_VERTEX_LOCATION,
 		GOOGLE_APPLICATION_CREDENTIALS_JSON:
 			process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
+		GCS_VIDEO_BUCKET: process.env.GCS_VIDEO_BUCKET,
 		KAKAO_OAUTH_CLIENT_ID: process.env.KAKAO_OAUTH_CLIENT_ID,
 		KAKAO_OAUTH_CLIENT_SECRET: process.env.KAKAO_OAUTH_CLIENT_SECRET,
 		SHARE_LINK_PEPPER: process.env.SHARE_LINK_PEPPER,
