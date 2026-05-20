@@ -18,7 +18,8 @@
     "db:seed-dev": "bun run scripts/seed-dev-tenant.ts",
     "letter-quality-check": "bun run scripts/letter-quality-check.ts",
     "e2e:auth-setup": "bun run scripts/save-e2e-storage-state.ts",
-    "vertex:smoke-test": "bun run scripts/vertex-smoke-test.ts"
+    "vertex:smoke-test": "bun run scripts/vertex-smoke-test.ts",
+    "seed:reference-video": "bun run scripts/seed-reference-video.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
