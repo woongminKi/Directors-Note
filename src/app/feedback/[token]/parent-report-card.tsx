@@ -35,6 +35,16 @@ export function ParentReportCard({ feedback }: { feedback: Feedback }) {
 
 				<footer className="text-center text-xs text-muted-foreground space-y-1 pt-4">
 					<p>이 링크는 발송 후 30일 동안만 열람 가능합니다.</p>
+					<p>
+						<a
+							className="underline"
+							href="/privacy"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							개인정보처리방침
+						</a>
+					</p>
 				</footer>
 			</div>
 		</main>

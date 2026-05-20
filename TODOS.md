@@ -79,7 +79,7 @@ Real end-to-end walkthrough: start eval (이서준) → bullet form → AI lette
 
 Must complete before friend's first parent share-link is sent to a real parent.
 
-- [ ] **Privacy policy page** — draft a real `/privacy` page (PIPA-compliant Korean text). Lawyer review desirable; minimum viable: data collected, retention period, contact for revocation, third-party sub-processors (Supabase, OpenAI, Vercel). Re-add the footer link in `src/app/feedback/[token]/parent-report-card.tsx` once drafted.
+- [~] **Privacy policy page** — v1-draft shipped 2026-05-21 (`src/app/privacy/page.tsx`). PIPA 11개 섹션 (수집 항목 / 목적 / 보유기간 / 제3자 제공 / 위탁 (Supabase·Vercel·OpenAI·Kakao) / 정보주체 권리 / 안전성 / 자동화 의사결정 / 보호책임자 / 권익침해 구제 / 변경이력) + 상단 amber 배너 "초안 / 외부 법률 검토 중". Footer 링크 복원 (parent-report-card.tsx). **남은 일:** 외부 변호사 검토 → 배너 제거 + 시행일 갱신. AI 영상 분석 활성화 시 §1 생체정보 섹션 추가 + parent consent v2 와이어링.
 - [ ] **Production deploy decisions C1/C2/C3** — see `docs/production-deploy-plan.md`. Three choices owed: (1) split-prod-Supabase before-or-after friend's first OAuth, (2) custom-domain vs vercel.app subdomain, (3) Kakao app strategy (single vs multi). Without these, ship is on dev infra.
 
 ## Vertex Approach-B follow-ups (2026-05-21)
