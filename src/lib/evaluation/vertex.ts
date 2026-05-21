@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sql } from "drizzle-orm";
 import { GoogleAuth } from "google-auth-library";
 import type { db as DbClient } from "@/lib/db/client";
-import { STUDENT_VIDEOS_BUCKET } from "@/lib/evaluations/upload-action";
+import { STUDENT_VIDEOS_BUCKET } from "@/lib/evaluations/constants";
 import { buildAnalysisFromMatches } from "./grade-derivation";
 import type {
 	AIAnalysis,

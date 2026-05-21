@@ -12,10 +12,7 @@ vi.mock("google-auth-library", () => ({
 	},
 }));
 
-// Mock STUDENT_VIDEOS_BUCKET import (avoids server-only chain).
-vi.mock("@/lib/evaluations/upload-action", () => ({
-	STUDENT_VIDEOS_BUCKET: "student-videos",
-}));
+// STUDENT_VIDEOS_BUCKET 는 평범한 plain module 의 export — 별도 mock 불필요.
 
 import { VertexVideoAnalysisService } from "@/lib/evaluation/vertex";
 import type { ProgressEvent } from "@/lib/evaluation/types";

@@ -3,9 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { db } from "@/lib/db/client";
 import { evaluations } from "@/lib/db/schema";
+import { STUDENT_VIDEOS_BUCKET } from "@/lib/evaluations/constants";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-
-export const STUDENT_VIDEOS_BUCKET = "student-videos";
 
 export async function createSignedUploadUrl(
 	evaluationId: string,
