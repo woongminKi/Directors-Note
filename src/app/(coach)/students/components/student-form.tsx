@@ -15,6 +15,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
+	CONSENT_VERSION_LABEL,
+	CURRENT_PARENT_CONSENT_VERSION,
+} from "@/lib/consent/version";
+import {
 	type StudentFormInput,
 	studentFormSchema,
 } from "@/lib/students/schema";
@@ -86,15 +90,33 @@ export function StudentForm({
 					control={form.control}
 					name="parentConsentOnFile"
 					render={({ field }) => (
-						<FormItem className="flex items-center justify-between rounded border p-3">
-							<FormLabel className="flex-1">부모 동의서 받음</FormLabel>
-							<FormControl>
-								<Switch
-									checked={field.value}
-									onCheckedChange={field.onChange}
-									disabled={!canEditConsent}
-								/>
-							</FormControl>
+						<FormItem className="space-y-2 rounded border p-3">
+							<div className="flex items-center justify-between gap-3">
+								<FormLabel className="flex-1">
+									<div className="space-y-0.5">
+										<div>부모 동의서 받음</div>
+										<div className="text-xs font-normal text-muted-foreground">
+											현행 버전 {CURRENT_PARENT_CONSENT_VERSION} ·{" "}
+											{CONSENT_VERSION_LABEL}
+										</div>
+									</div>
+								</FormLabel>
+								<FormControl>
+									<Switch
+										checked={field.value}
+										onCheckedChange={field.onChange}
+										disabled={!canEditConsent}
+									/>
+								</FormControl>
+							</div>
+							<a
+								className="text-xs text-muted-foreground underline"
+								href="/parent-consent"
+								target="_blank"
+								rel="noreferrer"
+							>
+								동의서 전문 보기 →
+							</a>
 						</FormItem>
 					)}
 				/>

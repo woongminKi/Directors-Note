@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireRole } from "@/lib/auth/require-role";
+import { CURRENT_PARENT_CONSENT_VERSION } from "@/lib/consent/version";
 import { db } from "@/lib/db/client";
 import { students } from "@/lib/db/schema";
 import {
@@ -31,6 +32,9 @@ export async function createStudent(
 			year: normalizeYear(parsed.data.year),
 			parentConsentOnFileAt: parsed.data.parentConsentOnFile
 				? new Date()
+				: null,
+			parentConsentVersion: parsed.data.parentConsentOnFile
+				? CURRENT_PARENT_CONSENT_VERSION
 				: null,
 		})
 		.returning({ id: students.id });
@@ -69,6 +73,9 @@ export async function updateStudent(
 			year: normalizeYear(parsed.data.year),
 			parentConsentOnFileAt: parsed.data.parentConsentOnFile
 				? (existing.parentConsentOnFileAt ?? new Date())
+				: null,
+			parentConsentVersion: parsed.data.parentConsentOnFile
+				? (existing.parentConsentVersion ?? CURRENT_PARENT_CONSENT_VERSION)
 				: null,
 			updatedAt: new Date(),
 		})

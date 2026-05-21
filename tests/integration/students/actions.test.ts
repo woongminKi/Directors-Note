@@ -1,17 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const insertValues = vi.fn(() => ({
+	returning: vi.fn(async () => [{ id: "stu-1" }]),
+}));
+const updateSet = vi.fn(() => ({ where: vi.fn(async () => ({})) }));
+
 vi.mock("@/lib/auth/require-auth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/db/client", () => ({
 	db: {
-		insert: vi.fn(() => ({
-			values: vi.fn(() => ({
-				returning: vi.fn(async () => [{ id: "stu-1" }]),
-			})),
-		})),
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
-		})),
+		insert: vi.fn(() => ({ values: insertValues })),
+		update: vi.fn(() => ({ set: updateSet })),
 		query: { students: { findFirst: vi.fn() } },
 	},
 }));
@@ -19,6 +18,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireRole } from "@/lib/auth/require-role";
+import { CURRENT_PARENT_CONSENT_VERSION } from "@/lib/consent/version";
 import { db } from "@/lib/db/client";
 import {
 	archiveStudent,
@@ -35,7 +35,7 @@ describe("createStudent", () => {
 		);
 	});
 
-	it("inserts student with consent timestamp when toggle ON", async () => {
+	it("inserts student with consent timestamp + current version when toggle ON", async () => {
 		const res = await createStudent({
 			name: "박지윤",
 			year: "2년차",
@@ -43,6 +43,26 @@ describe("createStudent", () => {
 		});
 		expect(res.ok).toBe(true);
 		expect(db.insert).toHaveBeenCalled();
+		const args = (insertValues.mock.calls as unknown as unknown[][])[0]?.[0] as {
+			parentConsentOnFileAt: Date | null;
+			parentConsentVersion: string | null;
+		};
+		expect(args.parentConsentOnFileAt).toBeInstanceOf(Date);
+		expect(args.parentConsentVersion).toBe(CURRENT_PARENT_CONSENT_VERSION);
+	});
+
+	it("inserts student with null consent fields when toggle OFF", async () => {
+		const res = await createStudent({
+			name: "박지윤",
+			parentConsentOnFile: false,
+		});
+		expect(res.ok).toBe(true);
+		const args = (insertValues.mock.calls as unknown as unknown[][])[0]?.[0] as {
+			parentConsentOnFileAt: Date | null;
+			parentConsentVersion: string | null;
+		};
+		expect(args.parentConsentOnFileAt).toBeNull();
+		expect(args.parentConsentVersion).toBeNull();
 	});
 
 	it("rejects invalid input via Zod", async () => {
@@ -128,5 +148,70 @@ describe("updateStudent", () => {
 		});
 		expect(res.ok).toBe(true);
 		expect(requireRole).not.toHaveBeenCalled();
+	});
+
+	it("stamps current consent version when toggling consent ON for first time", async () => {
+		vi.mocked(db.query.students.findFirst).mockResolvedValue(
+			{
+				id: "stu-1",
+				academyId: "acad-1",
+				parentConsentOnFileAt: null,
+				parentConsentVersion: null,
+				// biome-ignore lint/suspicious/noExplicitAny: partial mock
+			} as any,
+		);
+		const res = await updateStudent("stu-1", {
+			name: "박지윤",
+			parentConsentOnFile: true,
+		});
+		expect(res.ok).toBe(true);
+		const args = (updateSet.mock.calls as unknown as unknown[][])[0]?.[0] as {
+			parentConsentVersion: string | null;
+		};
+		expect(args.parentConsentVersion).toBe(CURRENT_PARENT_CONSENT_VERSION);
+	});
+
+	it("preserves existing consent version on subsequent updates", async () => {
+		vi.mocked(db.query.students.findFirst).mockResolvedValue(
+			{
+				id: "stu-1",
+				academyId: "acad-1",
+				parentConsentOnFileAt: new Date("2026-01-01"),
+				parentConsentVersion: "2026-01-01-v1",
+				// biome-ignore lint/suspicious/noExplicitAny: partial mock
+			} as any,
+		);
+		const res = await updateStudent("stu-1", {
+			name: "박지윤",
+			parentConsentOnFile: true,
+		});
+		expect(res.ok).toBe(true);
+		const args = (updateSet.mock.calls as unknown as unknown[][])[0]?.[0] as {
+			parentConsentVersion: string | null;
+		};
+		expect(args.parentConsentVersion).toBe("2026-01-01-v1");
+	});
+
+	it("nulls consent version when toggling consent OFF", async () => {
+		vi.mocked(db.query.students.findFirst).mockResolvedValue(
+			{
+				id: "stu-1",
+				academyId: "acad-1",
+				parentConsentOnFileAt: new Date("2026-01-01"),
+				parentConsentVersion: "2026-01-01-v1",
+				// biome-ignore lint/suspicious/noExplicitAny: partial mock
+			} as any,
+		);
+		const res = await updateStudent("stu-1", {
+			name: "박지윤",
+			parentConsentOnFile: false,
+		});
+		expect(res.ok).toBe(true);
+		const args = (updateSet.mock.calls as unknown as unknown[][])[0]?.[0] as {
+			parentConsentOnFileAt: Date | null;
+			parentConsentVersion: string | null;
+		};
+		expect(args.parentConsentOnFileAt).toBeNull();
+		expect(args.parentConsentVersion).toBeNull();
 	});
 });
