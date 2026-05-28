@@ -16,6 +16,7 @@
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio",
     "db:seed-dev": "bun run scripts/seed-dev-tenant.ts",
+    "db:seed-prod-academy": "bun run scripts/seed-prod-academy.ts",
     "letter-quality-check": "bun run scripts/letter-quality-check.ts",
     "e2e:auth-setup": "bun run scripts/save-e2e-storage-state.ts",
     "vertex:smoke-test": "bun run scripts/vertex-smoke-test.ts",

@@ -1,8 +1,18 @@
 # Production Deploy Plan — Director's Note v1
 
-**Status as of 2026-05-14:** planning only — no prod env exists yet. This doc captures the decisions you need to make + the steps once those decisions are locked.
+**Status as of 2026-05-28:** decisions locked, execution pending. This doc captures the locked decisions + the steps to execute when ready.
 
-Trigger to execute: friend has done first OAuth, walked through the app on dev, accepted the v1 surface as good enough to share with parents. Likely 1-2 weeks out.
+Trigger to execute: ready whenever friend's prod environment is needed. Per C1 timing decision, prod setup happens BEFORE friend's first OAuth — so this can run anytime.
+
+## Locked decisions (2026-05-28)
+
+| Decision | Choice | Notes |
+|---|---|---|
+| **C1 — Supabase env split** | B (separate prod project) | `directors-note-prod` in ap-northeast-2 (Seoul) |
+| **C2 — Domain** | `*.vercel.app` subdomain | Reassess at academy #2 onboarding |
+| **C3 — Kakao app strategy** | A (single app, multi Redirect URI) | Add prod callback URI to existing app |
+| **Timing** | Before friend's first OAuth | Friend logs into prod directly; dev stays clean |
+| **Prod academy name** | `카타르시스 연기학원` | Same name as dev, new prod UUID |
 
 ---
 
@@ -15,14 +25,14 @@ Trigger to execute: friend has done first OAuth, walked through the app on dev, 
 | Vercel project | not created |
 | Kakao app | one app, `Default Rest API Key` configured for localhost |
 | CI | `.github/workflows/ci.yml` (lint + typecheck + vitest) — added 2026-05-14 |
-| Migrations applied | 0001 → 0005 |
+| Migrations applied | 0001 → 0009 confirmed. 0010 (cosine RPC) + 0011/0012 (delete_student lock) pending user verification — see Vertex Approach-B follow-ups in TODOS.md |
 | Seeded data | 1 academy (카타르시스), 2 test users (dev-owner/coach), 5 students, 3 evals |
 
 Real friend data has not yet entered the system. The dev Supabase IS the place friend will eventually use unless we split before going live.
 
 ---
 
-## C1: Supabase environment split — recommendation
+## C1: Supabase environment split — **LOCKED: B (separate prod project)**
 
 ### Options
 
@@ -38,10 +48,16 @@ Real friend data has not yet entered the system. The dev Supabase IS the place f
 
 ### Migration when split happens
 
-1. New Supabase project (suggest name: `directors-note-prod`, region: ap-northeast-2 — Seoul)
-2. Apply migrations 0001 → 0005 in order via Supabase CLI or MCP `apply_migration`
-3. Seed only the 카타르시스 academy row + nothing else (no test users)
-4. Update Vercel project env to point at prod Supabase URL + keys
+1. New Supabase project: name `directors-note-prod`, region ap-northeast-2 (Seoul)
+2. Apply migrations **0001 → 0012** in order via Supabase SQL Editor (paste each file content, Run). All 12 migration files are in `migrations/`.
+3. Seed only the 카타르시스 academy row (no test users / no test students):
+   ```bash
+   # Create .env.local.prod with prod DATABASE_URL + Supabase keys.
+   # Then:
+   bun --env-file=.env.local.prod run db:seed-prod-academy
+   # Prints the new prod academy UUID — record it for Phase 2 owner seed.
+   ```
+4. Update Vercel project env to point at prod Supabase URL + keys (see C2 §Steps)
 5. Keep dev Supabase as-is for ongoing development
 
 ### Cleanup needed before split
@@ -52,7 +68,7 @@ Real friend data has not yet entered the system. The dev Supabase IS the place f
 
 ---
 
-## C2: Vercel project setup
+## C2: Vercel project setup — **LOCKED: `*.vercel.app` subdomain**
 
 ### Steps (after C1 decision)
 
@@ -93,7 +109,7 @@ Real friend data has not yet entered the system. The dev Supabase IS the place f
 
 ---
 
-## C3: Kakao app strategy
+## C3: Kakao app strategy — **LOCKED: A (single app, multi Redirect URI)**
 
 ### Options
 
@@ -134,34 +150,78 @@ Still pending Kakao approval (see `docs/oauth-handoff.md`). Same approval covers
 
 ## Deploy runbook (when ready)
 
+End-to-end sequence per locked decisions. Execute in order.
+
 ```bash
-# 1. Pre-deploy local check
+# === Phase 0: Local pre-flight ===
 bun run lint
 bun run typecheck
 bun run test:ci
-
-# 2. Push to main
-git push origin main
-
-# 3. Vercel auto-deploys. Monitor:
-#    - https://vercel.com/<your-team>/directors-note → Deployments
-#    - Build log should pass env validation
-#    - "Ready" status within ~2 min
-
-# 4. Smoke test prod URL
-#    - / → loads
-#    - /login → renders Kakao button
-#    - /dashboard → redirects to /login (no session)
-
-# 5. Friend logs in via Kakao OAuth
-#    - Lands on /auth/not-invited (expected — Phase 2 not yet done)
-
-# 6. Phase 2 owner seed (via MCP on prod)
-#    SELECT id FROM auth.users WHERE email = '<friend>';
-#    INSERT INTO public.users (id, academy_id, role, email) VALUES (...);
-
-# 7. Friend refreshes → /dashboard with empty state
 ```
+
+### Phase 1 — Prod Supabase project
+
+1. Supabase dashboard → New project: name `directors-note-prod`, region `ap-northeast-2` (Seoul), DB password recorded
+2. Project Settings → API → copy URL + anon key + service-role key
+3. Project Settings → Database → copy pooled connection string (DATABASE_URL)
+4. SQL Editor → paste & Run each migration in order: `migrations/0001_init.sql` → `0002_rls.sql` → ... → `0012_lock_down_delete_student.sql` (12 files)
+5. Create `.env.local.prod` locally with prod URL/keys/DATABASE_URL (do NOT commit)
+6. Seed academy row only:
+   ```bash
+   bun --env-file=.env.local.prod run db:seed-prod-academy
+   # → prints prod academy UUID. Record it.
+   ```
+
+### Phase 2 — Vercel project
+
+1. Vercel dashboard → New project → import `woongminKi/Directors-Note` GitHub repo. Production branch: `main`. Framework: Next.js.
+2. Settings → Environment Variables (Production scope) → set:
+   - `NEXT_PUBLIC_SUPABASE_URL` = prod URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = prod anon
+   - `SUPABASE_SERVICE_ROLE_KEY` = prod service-role
+   - `DATABASE_URL` = prod pooled
+   - `OPENAI_API_KEY` = prod-scoped key (recommend separate quota from dev)
+   - `KAKAO_OAUTH_CLIENT_ID` = existing Kakao app REST API key
+   - `KAKAO_OAUTH_CLIENT_SECRET` = existing Kakao app Client Secret
+   - `SHARE_LINK_PEPPER` = `openssl rand -hex 32` output (NEW value — must differ from dev)
+   - `NEXT_PUBLIC_APP_URL` = `https://<project-slug>.vercel.app` (placeholder; update after first deploy assigns the actual subdomain)
+   - `FEATURE_AI_VIDEO_ANALYSIS` = `false` (until PIPA gate clears Vertex)
+3. Settings → Domains → keep default `<project-slug>.vercel.app`. No custom domain for pilot.
+4. Deploy → first deploy from `main`. Verify build passes env validation (`env.ts` zod check).
+5. After deploy assigns the actual subdomain: update `NEXT_PUBLIC_APP_URL` to that exact value and redeploy (Vercel → Deployments → ⋯ → Redeploy).
+
+### Phase 3 — Kakao + Supabase Auth wiring
+
+1. Supabase prod dashboard → Authentication → Providers → Kakao → Enable. Paste existing Kakao Client ID + Secret (same as dev).
+2. Kakao Developers → 카카오 로그인 → Default Rest API Key → Redirect URI 추가:
+   - `https://<prod-supabase-ref>.supabase.co/auth/v1/callback`
+   - Keep dev redirect URI in place (both work simultaneously)
+3. Kakao Developers → Platform → Web → 사이트 도메인 → add `https://<project-slug>.vercel.app` alongside localhost
+4. Smoke test prod URL in incognito:
+   - `/` → loads / redirects to `/login`
+   - `/login` → Kakao 버튼 보임
+   - Click Kakao → consent → redirect back → `/auth/not-invited` (expected, Phase 4 not yet done)
+
+### Phase 4 — Friend onboarding (when friend is in front of you)
+
+1. Friend logs in via Kakao on prod URL. Lands on `/auth/not-invited`.
+2. In Supabase prod SQL Editor:
+   ```sql
+   SELECT id, email FROM auth.users ORDER BY created_at DESC LIMIT 5;
+   -- find friend's row, copy id + email
+
+   INSERT INTO public.users (id, academy_id, role, email, display_name)
+   VALUES (
+     '<auth.users.id from above>',
+     '<prod academy UUID from Phase 1.6>',
+     'owner',
+     '<friend email>',
+     '<friend display name>'
+   );
+   ```
+3. Friend refreshes browser → lands on `/dashboard` with empty state.
+4. Friend adds first real student via `/students/new`.
+5. Friend starts first real evaluation → bullet form → AI letter → review → send → real parent share-link.
 
 ## Rollback strategy
 
@@ -174,17 +234,6 @@ For migrations specifically:
 - Apply via MCP `apply_migration` only after dev verification
 - Use `supabase db diff` to preview against prod state
 - Migration files in `migrations/` are source of truth; both projects should converge to the same state
-
----
-
-## Decisions you need to make before executing
-
-1. **Prod Supabase project name** — suggested `directors-note-prod` (region ap-northeast-2)
-2. **Production domain** — `*.vercel.app` subdomain OR custom domain (which?)
-3. **Timing** — execute prod split before or after friend's first OAuth login?
-   - Recommend: **before**. Friend logs into prod directly; dev stays clean for testing.
-
-Once you've decided, ping me and I'll write the migration runbook + execute the steps via MCP where possible.
 
 ---
 
