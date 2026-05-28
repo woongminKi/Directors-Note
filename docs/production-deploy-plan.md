@@ -164,8 +164,8 @@ bun run test:ci
 1. Supabase dashboard → New project: name `directors-note-prod`, region `ap-northeast-2` (Seoul), DB password recorded
 2. Project Settings → API → copy URL + anon key + service-role key
 3. Project Settings → Database → copy pooled connection string (DATABASE_URL)
-4. SQL Editor → paste & Run each migration in order: `migrations/0001_init.sql` → `0002_rls.sql` → ... → `0012_lock_down_delete_student.sql` (12 files)
-5. Create `.env.local.prod` locally with prod URL/keys/DATABASE_URL (do NOT commit)
+4. SQL Editor → paste & Run **`scripts/prod-bootstrap.sql`** (단일 파일, migrations/0001 → 0012 concatenated). 한 번에 끝남. 개별 파일로 단계별 적용하려면 `migrations/0001_init.sql` → `0012_lock_down_delete_student.sql` 순서로 12회 paste 도 가능 (디버깅용).
+5. Create `.env.local.prod` locally — `.env.local.prod.example` 복사 후 prod 값으로 채우기 (do NOT commit; `.env*` rule 로 ignore 됨, `.example` 만 예외 등록).
 6. Seed academy row only:
    ```bash
    bun --env-file=.env.local.prod run db:seed-prod-academy

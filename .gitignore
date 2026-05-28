@@ -30,9 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (only the example template is committed)
+# env files (only the example templates are committed)
 .env*
 !.env.local.example
+!.env.local.prod.example
 
 # vercel
 .vercel
