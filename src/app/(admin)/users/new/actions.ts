@@ -14,6 +14,9 @@ const inviteSchema = z.object({
 
 export type InviteUserResult = { ok: true } | { ok: false; error: string };
 
+// NOTE: Invite UI is hidden in v1 (see page.tsx banner) pending T30 —
+// auth.users id mismatch when invitee signs in via Kakao OAuth after
+// inviteUserByEmail. Action logic preserved for tests + post-T30 reactivation.
 export async function inviteUser(
 	input: z.infer<typeof inviteSchema>,
 ): Promise<InviteUserResult> {

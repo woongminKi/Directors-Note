@@ -44,7 +44,8 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 
 ## Deferred from T30 (2026-05-10)
 
-- [ ] **Kakao OAuth vs pre-invited users**: When a coach is invited via `inviteUserByEmail`, Supabase creates an `auth.users` row with a magic-link identity. If the coach later signs in via Kakao OAuth, Supabase may create a *different* `auth.users.id` for the Kakao identity provider — causing the `/auth/callback` `id` mismatch check to reject them. Test end-to-end: invite a user via T30 invite form, have them log in with Kakao OAuth, and verify they land on `/students` without error. If IDs diverge, consider linking identities via `supabase.auth.admin.linkIdentity` or using the email match path in `/auth/callback` instead of ID match.
+- [~] **Kakao OAuth vs pre-invited users**: When a coach is invited via `inviteUserByEmail`, Supabase creates an `auth.users` row with a magic-link identity. If the coach later signs in via Kakao OAuth, Supabase may create a *different* `auth.users.id` for the Kakao identity provider — causing the `/auth/callback` `id` mismatch check to reject them. Test end-to-end: invite a user via T30 invite form, have them log in with Kakao OAuth, and verify they land on `/students` without error. If IDs diverge, consider linking identities via `supabase.auth.admin.linkIdentity` or using the email match path in `/auth/callback` instead of ID match.
+  - **2026-05-28 mitigation**: `/admin/users/new` page swapped to a v1 banner ("초대 폼 비활성") so the invite flow is not surfaced. Server action + tests preserved for post-T30 reactivation. v1 pilot is single-owner; additional coaches seeded manually via Phase 2 pattern in `docs/production-deploy-plan.md`. Real fix (identity linking or callback heal) deferred until friend academy needs a 2nd coach.
 
 ## Deferred from E2E auth setup (2026-05-14) — RESOLVED 2026-05-14
 
