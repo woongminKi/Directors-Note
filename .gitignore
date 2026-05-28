@@ -52,3 +52,6 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code (per-user local overrides)
+.claude/settings.local.json
