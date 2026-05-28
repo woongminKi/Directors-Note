@@ -30,6 +30,10 @@ test("E2E-E1: Approach-A flow → review → send → share-link", async ({
 	await page.getByLabel(/발성/).fill("발성 좋음");
 	await page.getByLabel(/표정/).fill("표정 자연스러움");
 	await page.getByLabel(/입시 완성도/).fill("본방 70%");
+	// Force blur on the last filled field — .fill() dispatches input but not
+	// blur; react-hook-form may not commit the value to form state in time
+	// for the submit click otherwise (FIXME above hypothesis).
+	await page.getByLabel(/입시 완성도/).press("Tab");
 
 	// Use the literal button label, not a generic submit selector, so the
 	// scroll-into-view + click hit the intended action button.
