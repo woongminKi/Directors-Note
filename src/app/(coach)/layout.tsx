@@ -34,6 +34,14 @@ export default async function CoachLayout({
 					</Link>
 					{isOwner && (
 						<Link
+							href="/reference"
+							className="text-sm text-muted-foreground hover:text-foreground"
+						>
+							평가 기준
+						</Link>
+					)}
+					{isOwner && (
+						<Link
 							href="/users/new"
 							className="text-sm text-muted-foreground hover:text-foreground"
 						>
