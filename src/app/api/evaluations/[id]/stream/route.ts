@@ -10,6 +10,11 @@ import { getEvaluation } from "@/lib/evaluations/queries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Analysis pipeline (Supabase→GCS copy + Vertex embedding ~12s + cosine match
+// + gpt-4o-mini letter ~5s) runs ~20-30s — well over the legacy 10s default.
+// 300s is the Hobby + Fluid Compute ceiling. If the project lacks Fluid, the
+// Vercel build will reject this value (max 60s) — which itself tells us the cap.
+export const maxDuration = 300;
 
 export async function GET(
 	_req: Request,
