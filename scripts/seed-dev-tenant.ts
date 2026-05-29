@@ -46,6 +46,19 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !DATABASE_URL) {
 	process.exit(1);
 }
 
+// SAFETY GUARD — this seed CLEARS the academy's students and re-creates test
+// fixtures. The pilot reuses this Supabase project as production (2026-05-29),
+// so an accidental run would DELETE the academy's real students. Refuse unless
+// the operator explicitly opts in. NEVER set ALLOW_DEV_SEED against the prod DB.
+if (process.env.ALLOW_DEV_SEED !== "1") {
+	console.error(
+		"Refusing to seed: this destroys + recreates student data and this DB is\n" +
+			"the production pilot project. If you really mean it on a throwaway DB,\n" +
+			"re-run with ALLOW_DEV_SEED=1.",
+	);
+	process.exit(1);
+}
+
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 	auth: { persistSession: false, autoRefreshToken: false },
 });
