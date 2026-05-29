@@ -78,11 +78,12 @@
 | `/feedback/<invalid-token>` | ✅ | 정상 ("만료되었거나 유효하지 않은 링크입니다" 에러 상태 graceful) | — |
 | `/privacy` | ✅ (수정 후) | 정상 (amber 초안 배너 + 11섹션 + 표, 가로 스크롤 X) | FINDING-001 수정으로 접근 가능 |
 | `/parent-consent` | ✅ (수정 후) | 정상 (amber 배너 + 제1·2부 + PIPA 제23조 생체정보 동의 + 위탁업체 표, 가로 스크롤 X) | FINDING-001 수정으로 접근 가능 |
-| `/students/new` | ❌ | 확인 불가 | 코치 인증 필요 (Kakao OAuth) |
-| `/feedback/<valid-token>` 카드 + privacy 푸터 | ❌ | 확인 불가 | 유효 토큰(시드 데이터) 필요 |
+| `/students/new` | ✅ (E2E setup 후) | 정상 | E2E 인증 와이어링(2.5) 이후 owner 로 확인됨 |
+| `/feedback/<valid-token>` 카드 + privacy 푸터 | ✅ | 정상 (locked B안 카드형, 가로 스크롤 X) | 아래 closure 참조 |
 
-- 스크린샷: `/tmp/dn-p1-shots/{login,feedback-invalid,privacy,parent-consent}-mobile.png`
-- **남은 미확인:** `/students/new`(코치 OAuth 로그인 필요)와 `/feedback/<valid-token>` 부모 카드+privacy 푸터(평가/토큰 시드 필요)는 헤드리스에서 인증·시드 없이 도달 불가. 코치 로그인 또는 dev 시드 후 별도 확인 권장.
+- 스크린샷: `/tmp/dn-p1-shots/{login,feedback-invalid,privacy,parent-consent,parent-card}-mobile.png`
+
+**P1 closure — 부모 share-link 카드 end-to-end ✅:** E2E 발송 플로우로 유효 토큰을 캡처해 **비인증(부모) 브라우저**로 `/feedback/<token>` 모바일 확인. 카드 정상 렌더(학원명·평가일·학생·따뜻한 정중체 코치 letter·"30일 열람"·개인정보처리방침 푸터), 가로 스크롤 없음. 푸터 `개인정보처리방침`(→`/privacy`, target=_blank)을 같은 비인증 컨텍스트에서 열어 200·h1 정상 — **FINDING-001 수정이 실제 부모 동선에서 작동**함을 확인. P1 전 surface 검증 완료.
 
 ---
 
