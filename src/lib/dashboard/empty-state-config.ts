@@ -22,7 +22,7 @@ const CONFIG: Record<EmptyStateVariant, EmptyStateConfig> = {
 	},
 	"owner-no-coach": {
 		message: "함께 일할 코치를 초대해 보세요.",
-		cta: { label: "코치 초대", href: "/admin/users/new" },
+		cta: { label: "코치 초대", href: "/users/new" },
 	},
 };
 

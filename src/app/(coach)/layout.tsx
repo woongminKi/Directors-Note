@@ -34,7 +34,7 @@ export default async function CoachLayout({
 					</Link>
 					{isOwner && (
 						<Link
-							href="/admin/users/new"
+							href="/users/new"
 							className="text-sm text-muted-foreground hover:text-foreground"
 						>
 							사용자 초대
