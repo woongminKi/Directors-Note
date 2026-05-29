@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { db } from "@/lib/db/client";
 import { feedbackDrafts } from "@/lib/db/schema";
 import { getEvaluation } from "@/lib/evaluations/queries";
+import { AnalysisResult } from "./analysis-result";
 import { ReviewEditor } from "./review-editor";
 
 export default async function ReviewPage({
@@ -35,6 +36,11 @@ export default async function ReviewPage({
 	const student = (
 		evaluation as { student?: { name: string; year: string | null } }
 	).student;
+	const analysis = (
+		evaluation as {
+			aiAnalysis?: Parameters<typeof AnalysisResult>[0]["analysis"] | null;
+		}
+	).aiAnalysis;
 
 	return (
 		<main className="px-4 py-6 max-w-md mx-auto space-y-4">
@@ -46,6 +52,7 @@ export default async function ReviewPage({
 					{student?.year ?? "구분 미입력"}
 				</p>
 			</header>
+			{analysis && <AnalysisResult analysis={analysis} />}
 			<ReviewEditor draftId={draft.id} initialText={draft.aiDraftText} />
 		</main>
 	);
