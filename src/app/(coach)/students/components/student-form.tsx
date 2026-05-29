@@ -121,8 +121,12 @@ export function StudentForm({
 					)}
 				/>
 				{error && <p className="text-sm text-destructive">{error}</p>}
-				<Button type="submit" className="w-full">
-					{submitLabel}
+				<Button
+					type="submit"
+					className="w-full"
+					disabled={form.formState.isSubmitting}
+				>
+					{form.formState.isSubmitting ? "저장 중…" : submitLabel}
 				</Button>
 			</form>
 		</Form>
