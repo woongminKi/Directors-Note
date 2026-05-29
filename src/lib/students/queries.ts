@@ -3,16 +3,19 @@ import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { evaluations, feedbackDrafts, students } from "@/lib/db/schema";
 
-export type StudentListFilter = "active" | "no_consent" | "archived";
+export type StudentListFilter = "all" | "active" | "no_consent" | "archived";
 
 export async function listStudents(
 	academyId: string,
-	filter: StudentListFilter = "active",
+	filter: StudentListFilter = "all",
 ) {
+	// "all" = every non-archived student (active + no_consent). "archived" is the
+	// only filter that surfaces soft-deleted rows; everything else excludes them.
 	const archivedClause =
 		filter === "archived"
 			? isNotNull(students.softDeletedAt)
 			: isNull(students.softDeletedAt);
+	// Consent narrows only for active/no_consent; "all"/"archived" leave it unset.
 	const consentClause =
 		filter === "active"
 			? isNotNull(students.parentConsentOnFileAt)

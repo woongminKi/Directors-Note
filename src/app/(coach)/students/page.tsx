@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { StudentRow } from "./components/student-row";
 
 const FILTERS: { key: StudentListFilter; label: string }[] = [
+	{ key: "all", label: "전체" },
 	{ key: "active", label: "활성" },
 	{ key: "no_consent", label: "동의 미제출" },
 	{ key: "archived", label: "보관됨" },
@@ -19,9 +20,11 @@ export default async function StudentsPage({
 	const { academyId, role } = await requireAuth();
 	const { filter: rawFilter } = await searchParams;
 	const filter: StudentListFilter =
-		rawFilter === "no_consent" || rawFilter === "archived"
+		rawFilter === "active" ||
+		rawFilter === "no_consent" ||
+		rawFilter === "archived"
 			? rawFilter
-			: "active";
+			: "all";
 
 	const rows = await listStudents(academyId, filter);
 	const canManage = role === "owner" || role === "admin";
@@ -57,11 +60,11 @@ export default async function StudentsPage({
 			{rows.length === 0 ? (
 				<div className="text-center py-12 text-muted-foreground">
 					<p>
-						{filter === "active"
+						{filter === "all" || filter === "active"
 							? "첫 학생을 추가해 보세요"
 							: "해당하는 학생이 없습니다"}
 					</p>
-					{filter === "active" && canManage && (
+					{(filter === "all" || filter === "active") && canManage && (
 						<Link href="/students/new" className={cn(buttonVariants(), "mt-4")}>
 							학생 추가
 						</Link>
