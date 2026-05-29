@@ -59,15 +59,26 @@ export function VideoUploadFlow({
 	const [events, setEvents] = useState<AnalysisProgressEvent[]>([]);
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const [fileName, setFileName] = useState<string | null>(null);
+	const [videoUrl, setVideoUrl] = useState<string | null>(null);
 	const [progress, setProgress] = useState(0);
 	const [dragOver, setDragOver] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	const reset = () => {
+		if (videoUrl) URL.revokeObjectURL(videoUrl);
+		setVideoUrl(null);
+		setFileName(null);
+		setProgress(0);
+		setPhase("idle");
+	};
 
 	const upload = async (file: File) => {
 		if (!file.type.startsWith("video/")) {
 			toast.error("영상 파일만 업로드할 수 있습니다");
 			return;
 		}
+		if (videoUrl) URL.revokeObjectURL(videoUrl);
+		setVideoUrl(URL.createObjectURL(file));
 		setFileName(`${file.name} · ${formatSize(file.size)}`);
 		setProgress(0);
 		setPhase("uploading");
@@ -148,6 +159,38 @@ export function VideoUploadFlow({
 		);
 	}
 
+	// ready: show the uploaded video so the coach can see what they're analyzing.
+	if (phase === "ready") {
+		return (
+			<div className="space-y-3">
+				<div className="rounded-lg border bg-card p-3 space-y-2">
+					<p className="text-xs text-muted-foreground">✓ 업로드된 영상</p>
+					{videoUrl ? (
+						// biome-ignore lint/a11y/useMediaCaption: coach-only preview of an uploaded clip
+						<video
+							src={videoUrl}
+							controls
+							className="w-full rounded-md bg-black max-h-72"
+						/>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							이전에 업로드된 영상이 있습니다.
+						</p>
+					)}
+					{fileName && (
+						<p className="text-xs text-muted-foreground">{fileName}</p>
+					)}
+				</div>
+				<Button className="w-full" onClick={startStreaming}>
+					분석 시작
+				</Button>
+				<Button variant="ghost" className="w-full" onClick={reset}>
+					다른 영상 선택
+				</Button>
+			</div>
+		);
+	}
+
 	return (
 		<div className="space-y-3">
 			<button
@@ -174,7 +217,7 @@ export function VideoUploadFlow({
 					영상을 끌어다 놓거나 클릭해서 선택
 				</p>
 				<p className="mt-1 text-xs text-muted-foreground">
-					mp4, mov 등 영상 파일 · {fileName ?? "선택된 파일 없음"}
+					mp4, mov 등 영상 파일
 				</p>
 			</button>
 			<input
@@ -187,11 +230,6 @@ export function VideoUploadFlow({
 					if (f) upload(f);
 				}}
 			/>
-			{phase === "ready" && (
-				<Button className="w-full" onClick={startStreaming}>
-					분석 시작
-				</Button>
-			)}
 		</div>
 	);
 }
