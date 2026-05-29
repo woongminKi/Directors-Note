@@ -2,13 +2,15 @@
 
 **Status as of 2026-05-28:** decisions locked, execution pending. This doc captures the locked decisions + the steps to execute when ready.
 
+> **⚠️ DECISION CHANGE 2026-05-29 — C1 reversed to Option A (reuse existing Supabase as prod).** The pilot no longer creates a separate `directors-note-prod` project; the existing project `kyizppeuvalqjtnhyqgf` (already ap-northeast-2 / Seoul) IS production. Mitigations shipped to cover Option A's cons: test data purged via `scripts/purge-pilot-test-data.ts`, and `db:seed-dev` now refuses to run without `ALLOW_DEV_SEED=1` (guards against clobbering real students). Migrations 0010→0012 already applied. Where this doc says "new project / prod URL", read it as the existing project's values. See session log 2026-05-29 §2.7.
+
 Trigger to execute: ready whenever friend's prod environment is needed. Per C1 timing decision, prod setup happens BEFORE friend's first OAuth — so this can run anytime.
 
-## Locked decisions (2026-05-28)
+## Locked decisions (2026-05-28; C1 superseded 2026-05-29)
 
 | Decision | Choice | Notes |
 |---|---|---|
-| **C1 — Supabase env split** | B (separate prod project) | `directors-note-prod` in ap-northeast-2 (Seoul) |
+| **C1 — Supabase env split** | ~~B (separate prod project)~~ → **A (reuse existing project as prod)** (2026-05-29) | `kyizppeuvalqjtnhyqgf` (ap-northeast-2 Seoul) IS prod; test data purged + seed guarded |
 | **C2 — Domain** | `*.vercel.app` subdomain | Reassess at academy #2 onboarding |
 | **C3 — Kakao app strategy** | A (single app, multi Redirect URI) | Add prod callback URI to existing app |
 | **Timing** | Before friend's first OAuth | Friend logs into prod directly; dev stays clean |
@@ -25,14 +27,16 @@ Trigger to execute: ready whenever friend's prod environment is needed. Per C1 t
 | Vercel project | not created |
 | Kakao app | one app, `Default Rest API Key` configured for localhost |
 | CI | `.github/workflows/ci.yml` (lint + typecheck + vitest) — added 2026-05-14 |
-| Migrations applied | 0001 → 0009 confirmed. 0010 (cosine RPC) + 0011/0012 (delete_student lock) pending user verification — see Vertex Approach-B follow-ups in TODOS.md |
-| Seeded data | 1 academy (카타르시스), 2 test users (dev-owner/coach), 5 students, 3 evals |
+| Migrations applied | 0001 → 0012 all applied (0010/0011/0012 applied 2026-05-29). |
+| Seeded data | After 2026-05-29 purge: 1 academy (카타르시스 `554c…`), 1 real owner (`rldndals@naver.com`, founder Kakao), 0 students, 0 evals. Test users + test students removed. |
 
-Real friend data has not yet entered the system. The dev Supabase IS the place friend will eventually use unless we split before going live.
+Real friend data has not yet entered the system. Per the 2026-05-29 C1 reversal, this project IS prod — no split. Test data was purged and `db:seed-dev` is guarded so it can't clobber the friend's real students.
 
 ---
 
-## C1: Supabase environment split — **LOCKED: B (separate prod project)**
+## C1: Supabase environment split — ~~LOCKED: B~~ → **REVERSED 2026-05-29: A (reuse existing project)**
+
+> **2026-05-29:** Chose Option A after all — the existing project becomes prod directly. Rationale: simpler, one project to operate, region already Seoul. Option A's documented cons were mitigated, not ignored: (1) test-data pollution → purged via `scripts/purge-pilot-test-data.ts` (academy + founder Kakao account + reference data preserved; only `*@catharsis.test` + all test students/evals removed); (2) accidental `db:seed-dev` clobber → script now hard-refuses without `ALLOW_DEV_SEED=1`; (3) PIPA optics → test accounts removed before any real student lands. The Option A/B analysis below is kept for the record.
 
 ### Options
 
@@ -159,18 +163,15 @@ bun run typecheck
 bun run test:ci
 ```
 
-### Phase 1 — Prod Supabase project
+### Phase 1 — Prod Supabase project — **DONE 2026-05-29 (reuse existing project)**
 
-1. Supabase dashboard → New project: name `directors-note-prod`, region `ap-northeast-2` (Seoul), DB password recorded
-2. Project Settings → API → copy URL + anon key + service-role key
-3. Project Settings → Database → copy pooled connection string (DATABASE_URL)
-4. SQL Editor → paste & Run **`scripts/prod-bootstrap.sql`** (단일 파일, migrations/0001 → 0012 concatenated). 한 번에 끝남. 개별 파일로 단계별 적용하려면 `migrations/0001_init.sql` → `0012_lock_down_delete_student.sql` 순서로 12회 paste 도 가능 (디버깅용).
-5. Create `.env.local.prod` locally — `.env.local.prod.example` 복사 후 prod 값으로 채우기 (do NOT commit; `.env*` rule 로 ignore 됨, `.example` 만 예외 등록).
-6. Seed academy row only:
-   ```bash
-   bun --env-file=.env.local.prod run db:seed-prod-academy
-   # → prints prod academy UUID. Record it.
-   ```
+Per the C1 reversal, there is no new project. The existing project `kyizppeuvalqjtnhyqgf` IS prod. Completed 2026-05-29:
+
+1. ~~New project~~ — N/A. Existing project reused (already ap-northeast-2 / Seoul).
+2. API/DB creds: already in `.env.local`; `.env.local.prod` populated with the same values (pepper kept identical so existing share-link hashes stay valid).
+3. ~~Run prod-bootstrap.sql~~ — N/A on a fresh DB; instead migrations 0001→0009 were already applied and **0010/0011/0012 applied 2026-05-29**. (`scripts/prod-bootstrap.sql` remains a faithful 0001→0012 concat for any future fresh project.)
+4. **Test data purged** — `CONFIRM_PURGE=1 bun --env-file=.env.local.prod run scripts/purge-pilot-test-data.ts` (removed 12 students / 6 evals / 3 analyses / 6 drafts / 2 test accounts; kept academy + founder Kakao owner).
+5. Academy seed: **not needed** — the `카타르시스 연기학원` academy (`554c68ef-3244-44a3-96a1-397185ad41ea`) already exists and is preserved. Use this UUID for the Phase 4 friend-owner insert (no `db:seed-prod-academy` run required).
 
 ### Phase 2 — Vercel project
 
@@ -213,7 +214,7 @@ bun run test:ci
    INSERT INTO public.users (id, academy_id, role, email, display_name)
    VALUES (
      '<auth.users.id from above>',
-     '<prod academy UUID from Phase 1.6>',
+     '554c68ef-3244-44a3-96a1-397185ad41ea',  -- existing 카타르시스 연기학원 (C1 reversal: reuse)
      'owner',
      '<friend email>',
      '<friend display name>'

@@ -123,6 +123,24 @@
 
 **운영 메모 (E2E 돌리기 전):** `bun run db:seed-dev` → `bun run e2e:auth-setup` (fixtures ~1h 만료) → `E2E_AUTH_READY=1 PLAYWRIGHT_BASE_URL=http://localhost:3007 bun run test:e2e`. 로컬 webServer 는 CI 에서만 뜨므로 BASE_URL 로 실행 중인 dev 서버 지정 필수.
 
+## 2.7. C1 결정 변경 — dev Supabase를 prod로 재사용 + 안전작업
+
+**결정 (2026-05-29):** 락됐던 C1(B안, 별도 `directors-note-prod` 프로젝트 생성)을 **A안(기존 프로젝트 `kyizppeuvalqjtnhyqgf` 재사용)으로 변경.** 사유: 단순(운영 1개), 이미 ap-northeast-2(Seoul). Option A 단점은 무시하지 않고 완화:
+
+- **테스트 데이터 purge** — `scripts/purge-pilot-test-data.ts` 신규 (dry-run 기본, `CONFIRM_PURGE=1` 실행). 삭제: students 12 / evals 6 / ai_analyses 3 / feedback_drafts 6 / 테스트 계정 2(`dev-owner`·`dev-coach@catharsis.test`). 보존: academy `554c…`, **실 owner `rldndals@naver.com`(founder Kakao)**, reference 데이터. 이중 가드로 `*@catharsis.test` 외 계정은 삭제 불가(사용자 지시: founder Kakao 계정 절대 삭제 금지). 재실행 0건 = 멱등.
+- **`db:seed-dev` 폭탄 가드** — `ALLOW_DEV_SEED=1` 없으면 거부 (이 DB가 prod라 실학생 삭제 방지). 검증됨.
+- **pepper 통일** — `.env.local.prod`의 SHARE_LINK_PEPPER를 기존 dev 값으로(공유 DB라 링크 해시 일관성). 처음 생성한 새 pepper는 폐기.
+- **`.env.local.prod` 채움** — dev 값 그대로 + `NEXT_PUBLIC_APP_URL`만 `https://REPLACE-AFTER-FIRST-DEPLOY.vercel.app` placeholder. gitignored.
+- **migrations 0010~0012** 는 P0에서 이미 dev(=prod)에 적용 완료.
+
+**prod 빌드 사전 검증 ✅:** `bun --env-file=.env.local.prod run build` 통과 (전 라우트 컴파일, env 검증 OK, /privacy·/parent-consent static prerender). → Vercel 빌드 실패 위험 제거.
+
+**현재 prod 상태:** academy `카타르시스 연기학원`(554c) + owner `rldndals@naver.com` + 학생 0. 깨끗한 baseline.
+
+**남은 P2 (사용자 대시보드/대면):** Phase 2 Vercel(env = `.env.local.prod` 값 + 배포 후 APP_URL 교체) / Phase 3 Kakao redirect / Phase 4 친구 Kakao 로그인 → 554c owner INSERT. `docs/production-deploy-plan.md` 갱신 반영.
+
+**부수 영향:** dev=prod이므로 이 DB 대상 E2E/seed 워크플로우는 사실상 은퇴(seed 가드됨). 향후 E2E 회귀가 필요하면 별도 test DB 필요.
+
 ## 3. 변경된 파일
 
 **이미 커밋·푸시됨 (`1436edd..519dce8`):**
