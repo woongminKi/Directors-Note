@@ -51,14 +51,14 @@ Deferred work tracked here. Source of truth for "do this later." Items grouped b
 
 - [x] **Playwright `storageState` fixture generation** → Option (c) cookie-direct shipped (commit `e2dad92`). `bun run e2e:auth-setup` writes `tests/.auth/{owner,coach}.json` via password-grant + `@supabase/ssr` cookie-value encoding. E2E specs run with `E2E_AUTH_READY=1 bun run test:e2e`. Production Kakao OAuth path untouched.
 
-## E2E test-selector follow-ups (2026-05-14) — RESOLVED 3/4
+## E2E test-selector follow-ups (2026-05-14) — RESOLVED 4/4 (E1 done 2026-05-29)
 
-E2E auth working; 3 of 4 spec failures fixed in commits — E1 still skipped pending root-cause.
+E2E auth working; all 4 spec failures fixed.
 
 - [x] **E2E-D3** (`dashboard.spec.ts`): nav-link picked up by overly-permissive Korean-text regex → tightened to `a[href^='/students/']` (trailing slash disambiguates from nav `/students`).
 - [x] **E2E-S1** (`students.spec.ts`): missing storage at `describe` level → added `test.use({ storageState: "tests/.auth/owner.json" })`. Also surfaced the `year` schema bug (see new entry below); test now fills year explicitly + uses unique student name per run.
 - [x] **E2E-S3** (`students.spec.ts`): same storage-missing root cause + same year-required workaround. List assertion now matches `STUDENT_DELETED` prefix (archive action wipes name for PIPA).
-- [ ] **E2E-E1** (`review-send.spec.ts`): currently `test.skip(true)` with FIXME. Submit click on /coach-form doesn't trigger onSubmit under Playwright headless — no toast, no error, no nav. All 3 axes are filled per snapshot. Probably react-hook-form / Playwright `.fill()` timing (last field's onChange may not have flushed before button click). Worth re-investigating only when E2E becomes regression-critical.
+- [x] **E2E-E1** (`review-send.spec.ts`) — RESOLVED 2026-05-29. The FIXME ("submit doesn't fire under headless") was a misdiagnosis. Real cause: **non-idempotency** — the test picked the shared seed's first student and SENT that student's monthly eval, so re-runs/parallel hit `duplicate` (submit produced no nav) or had no startable 이번 달 평가 (/coach-form never reached). Fix: the test now provisions its OWN consent-on student per run (owner ctx creates via /students/new; coach ctx drives eval→review→send, since eval actions are `requireAuth`). `test.skip(true)` removed. Verified 3/3 consecutive + full parallel suite 11 pass/1 skip (skip = approach-c-stub stub). Also fixed a `waitForURL("**/students/*")` race that matched /students/new itself. Op note: E2E fixtures expire ~1h — reseed + `e2e:auth-setup` before runs; local webServer is CI-only so pass `PLAYWRIGHT_BASE_URL`.
 
 ## Real product bug surfaced 2026-05-14 — RESOLVED 2026-05-14
 
