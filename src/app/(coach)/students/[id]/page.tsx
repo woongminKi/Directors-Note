@@ -38,7 +38,7 @@ export default async function StudentDetailPage({
 					? `동의 ✓ ${kstToday(new Date(student.parentConsentOnFileAt))}`
 					: "동의 미제출"}
 			</p>
-			{!canEvaluate && (
+			{!student.parentConsentOnFileAt && (
 				<ConsentGuidanceCard
 					studentId={student.id}
 					canRecordConsent={canManage}

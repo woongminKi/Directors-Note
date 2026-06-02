@@ -281,5 +281,6 @@ describe("recordParentConsent", () => {
 		const res = await recordParentConsent("stu-1");
 		expect(res.ok).toBe(false);
 		if (!res.ok) expect(res.error).toContain("삭제");
+		expect(db.update).not.toHaveBeenCalled();
 	});
 });
