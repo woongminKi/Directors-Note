@@ -24,6 +24,6 @@ describe("emptyStateConfig", () => {
 	it("returns coach-invite CTA for owner-no-coach", () => {
 		const cfg = emptyStateConfig("owner-no-coach");
 		expect(cfg.cta?.label).toBe("코치 초대");
-		expect(cfg.cta?.href).toBe("/admin/users/new");
+		expect(cfg.cta?.href).toBe("/users/new");
 	});
 });

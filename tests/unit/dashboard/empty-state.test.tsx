@@ -22,7 +22,7 @@ describe("<EmptyState>", () => {
 		render(<EmptyState variant="owner-no-coach" />);
 		expect(screen.getByRole("link", { name: "코치 초대" })).toHaveAttribute(
 			"href",
-			"/admin/users/new",
+			"/users/new",
 		);
 	});
 });
