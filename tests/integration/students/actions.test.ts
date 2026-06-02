@@ -267,4 +267,19 @@ describe("recordParentConsent", () => {
 		vi.mocked(requireRole).mockRejectedValue(new Error("REDIRECT:/students"));
 		await expect(recordParentConsent("stu-1")).rejects.toThrow();
 	});
+
+	it("rejects when student is soft-deleted (archived)", async () => {
+		vi.mocked(db.query.students.findFirst).mockResolvedValue(
+			// biome-ignore lint/suspicious/noExplicitAny: partial mock
+			{
+				id: "stu-1",
+				academyId: "acad-1",
+				parentConsentOnFileAt: null,
+				softDeletedAt: new Date(),
+			} as any,
+		);
+		const res = await recordParentConsent("stu-1");
+		expect(res.ok).toBe(false);
+		if (!res.ok) expect(res.error).toContain("삭제");
+	});
 });
