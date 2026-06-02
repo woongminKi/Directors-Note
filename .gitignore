@@ -57,5 +57,6 @@ next-env.d.ts
 # Claude Code (per-user local overrides)
 .claude/settings.local.json
 .gstack/
+.superpowers/
 
 downloads/
