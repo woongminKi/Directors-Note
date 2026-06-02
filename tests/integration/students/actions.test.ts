@@ -23,6 +23,7 @@ import { db } from "@/lib/db/client";
 import {
 	archiveStudent,
 	createStudent,
+	recordParentConsent,
 	updateStudent,
 } from "@/lib/students/actions";
 
@@ -213,5 +214,57 @@ describe("updateStudent", () => {
 		};
 		expect(args.parentConsentOnFileAt).toBeNull();
 		expect(args.parentConsentVersion).toBeNull();
+	});
+});
+
+describe("recordParentConsent", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(requireRole).mockResolvedValue(
+			// biome-ignore lint/suspicious/noExplicitAny: partial mock
+			{ academyId: "acad-1", role: "owner" } as any,
+		);
+		vi.mocked(db.query.students.findFirst).mockResolvedValue(
+			// biome-ignore lint/suspicious/noExplicitAny: partial mock
+			{ id: "stu-1", academyId: "acad-1", parentConsentOnFileAt: null } as any,
+		);
+	});
+
+	it("stamps consent date + current version when not yet on file", async () => {
+		const res = await recordParentConsent("stu-1");
+		expect(res.ok).toBe(true);
+		expect(db.update).toHaveBeenCalled();
+		const args = (updateSet.mock.calls as unknown as unknown[][])[0]?.[0] as {
+			parentConsentOnFileAt: Date | null;
+			parentConsentVersion: string | null;
+		};
+		expect(args.parentConsentOnFileAt).toBeInstanceOf(Date);
+		expect(args.parentConsentVersion).toBe(CURRENT_PARENT_CONSENT_VERSION);
+	});
+
+	it("is idempotent no-op when consent already on file", async () => {
+		vi.mocked(db.query.students.findFirst).mockResolvedValue(
+			// biome-ignore lint/suspicious/noExplicitAny: partial mock
+			{
+				id: "stu-1",
+				academyId: "acad-1",
+				parentConsentOnFileAt: new Date("2026-01-01"),
+			} as any,
+		);
+		const res = await recordParentConsent("stu-1");
+		expect(res.ok).toBe(true);
+		expect(db.update).not.toHaveBeenCalled();
+	});
+
+	it("rejects when student not found in academy", async () => {
+		vi.mocked(db.query.students.findFirst).mockResolvedValue(undefined);
+		const res = await recordParentConsent("stu-missing");
+		expect(res.ok).toBe(false);
+		if (!res.ok) expect(res.error).toContain("찾을 수 없");
+	});
+
+	it("requires owner/admin (requireRole rejection propagates)", async () => {
+		vi.mocked(requireRole).mockRejectedValue(new Error("REDIRECT:/students"));
+		await expect(recordParentConsent("stu-1")).rejects.toThrow();
 	});
 });

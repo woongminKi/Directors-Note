@@ -109,3 +109,28 @@ export async function archiveStudent(id: string): Promise<ActionResult> {
 	revalidatePath("/students");
 	return { ok: true };
 }
+
+export async function recordParentConsent(id: string): Promise<ActionResult> {
+	const { academyId } = await requireRole(["owner", "admin"]);
+
+	const existing = await db.query.students.findFirst({
+		where: and(eq(students.id, id), eq(students.academyId, academyId)),
+	});
+	if (!existing) return { ok: false, error: "학생을 찾을 수 없습니다" };
+
+	// 이미 기록돼 있으면 멱등 no-op (중복 stamp 방지)
+	if (existing.parentConsentOnFileAt) return { ok: true };
+
+	await db
+		.update(students)
+		.set({
+			parentConsentOnFileAt: new Date(),
+			parentConsentVersion: CURRENT_PARENT_CONSENT_VERSION,
+			updatedAt: new Date(),
+		})
+		.where(and(eq(students.id, id), eq(students.academyId, academyId)));
+
+	revalidatePath("/students");
+	revalidatePath(`/students/${id}`);
+	return { ok: true };
+}
