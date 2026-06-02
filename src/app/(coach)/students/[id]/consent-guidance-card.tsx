@@ -3,10 +3,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -38,13 +40,13 @@ export function ConsentGuidanceCard({
 		});
 
 	return (
-		<div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
-			<p className="text-sm font-semibold text-amber-900">
+		<Alert className="mb-3 border-amber-300 bg-amber-50 text-amber-900">
+			<AlertTitle className="text-amber-900">
 				다음 할 일 — 부모 동의서
-			</p>
-			<p className="mt-0.5 mb-2 text-xs text-amber-800">
+			</AlertTitle>
+			<AlertDescription className="mt-0.5 mb-2 text-amber-800">
 				아직 동의서가 기록되지 않았어요. 부모 동의를 받은 뒤 표시하세요.
-			</p>
+			</AlertDescription>
 			<div className="flex items-center gap-3">
 				<Link
 					href="/parent-consent"
@@ -67,11 +69,15 @@ export function ConsentGuidanceCard({
 							<DialogHeader>
 								<DialogTitle>부모 동의를 받으셨나요?</DialogTitle>
 							</DialogHeader>
-							<p className="text-sm text-muted-foreground">
+							<DialogDescription>
 								확인 시 동의 완료로 기록되며, 이번 달 평가를 시작할 수 있습니다.
-							</p>
+							</DialogDescription>
 							<DialogFooter>
-								<Button variant="ghost" onClick={() => setOpen(false)}>
+								<Button
+									variant="ghost"
+									disabled={pending}
+									onClick={() => setOpen(false)}
+								>
 									취소
 								</Button>
 								<Button disabled={pending} onClick={handleConfirm}>
@@ -82,6 +88,6 @@ export function ConsentGuidanceCard({
 					</Dialog>
 				)}
 			</div>
-		</div>
+		</Alert>
 	);
 }
