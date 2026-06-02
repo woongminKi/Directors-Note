@@ -9,6 +9,7 @@ import {
 } from "@/lib/students/queries";
 import { cn } from "@/lib/utils";
 import { ArchiveConfirm } from "../components/archive-confirm";
+import { ConsentGuidanceCard } from "./consent-guidance-card";
 import { StartEvaluationButton } from "./start-evaluation-button";
 
 export default async function StudentDetailPage({
@@ -37,6 +38,12 @@ export default async function StudentDetailPage({
 					? `동의 ✓ ${kstToday(new Date(student.parentConsentOnFileAt))}`
 					: "동의 미제출"}
 			</p>
+			{!canEvaluate && (
+				<ConsentGuidanceCard
+					studentId={student.id}
+					canRecordConsent={canManage}
+				/>
+			)}
 			<StartEvaluationButton studentId={student.id} disabled={!canEvaluate} />
 			<section className="mt-6">
 				<h2 className="text-sm font-semibold text-muted-foreground mb-2">
