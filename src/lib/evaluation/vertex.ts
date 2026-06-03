@@ -3,9 +3,13 @@ import { sql } from "drizzle-orm";
 import { GoogleAuth } from "google-auth-library";
 import type { db as DbClient } from "@/lib/db/client";
 import { STUDENT_VIDEOS_BUCKET } from "@/lib/evaluations/constants";
-import { buildAnalysisFromMatches } from "./grade-derivation";
+import {
+	buildAnalysisFromPartMatches,
+	type PartMatchesByPart,
+} from "./grade-derivation";
 import type {
 	AIAnalysis,
+	PartIndex,
 	ProgressEvent,
 	ReferenceMatch,
 	VideoAnalysisRequest,
@@ -13,14 +17,26 @@ import type {
 } from "./types";
 
 // Vertex multimodalembedding@001 — video 모드는 1408d embedding 반환.
-// API: <location>-aiplatform.googleapis.com/v1/projects/<project>/locations/<location>/publishers/google/models/multimodalembedding@001:predict
-//
-// 지원 리전: us-central1, europe-west4, asia-northeast1 (Tokyo).
-// 영상 입력: gs:// URI 만 (inline base64 는 ≤4MB 라 실용 불가).
-// 호출당 비용: ~0.001 USD per 10-second segment.
+// 영상 구조 (도메인):
+//   part 1 (0-90s):    자유 연기 → axis: expression
+//   part 2 (90-150s):  무용·노래 → axis: vocal
+//   part 3 (150-270s): 압박 면접 → axis: examReadiness
+// 각 part 마다 Vertex 호출 (병렬) → 같은 part 의 reference 임베딩과 cosine 매칭.
 
 const VERTEX_MODEL = "multimodalembedding@001";
 const EMBEDDING_DIMENSION = 1408;
+
+interface PartWindow {
+	partIndex: PartIndex;
+	startOffsetSec: number;
+	endOffsetSec: number;
+}
+
+const PART_WINDOWS: readonly PartWindow[] = [
+	{ partIndex: 1, startOffsetSec: 0, endOffsetSec: 90 },
+	{ partIndex: 2, startOffsetSec: 90, endOffsetSec: 150 },
+	{ partIndex: 3, startOffsetSec: 150, endOffsetSec: 270 },
+] as const;
 
 interface VertexDeps {
 	projectId: string;
@@ -49,6 +65,11 @@ type CosineMatchRow = {
 	[k: string]: unknown;
 };
 
+interface PartEmbedding {
+	partIndex: PartIndex;
+	embedding: number[];
+}
+
 export class VertexVideoAnalysisService implements VideoAnalysisService {
 	private auth: GoogleAuth;
 
@@ -76,30 +97,53 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 				durationMs: 0,
 			});
 
-			// STEP 2: Vertex multimodal embedding
-			const embedding = await this.callVertexEmbedding(gcsUri);
+			// STEP 2: Vertex multimodal embedding — 3 parts in parallel
+			const partEmbeddings = await Promise.all(
+				PART_WINDOWS.map(
+					async (w): Promise<PartEmbedding> => ({
+						partIndex: w.partIndex,
+						embedding: await this.callVertexEmbedding(gcsUri, w),
+					}),
+				),
+			);
+			const part1Preview =
+				partEmbeddings.find((e) => e.partIndex === 1)?.embedding.slice(0, 10) ??
+				[];
 			onProgress({
 				step: "embedding_generated",
-				vectorPreview: embedding.slice(0, 10),
+				vectorPreview: part1Preview,
 			});
 
-			// STEP 3: pgvector cosine search vs academy reference set
-			const matches = await this.cosineSearch(embedding, req.academyId);
-			onProgress({ step: "matches_computed", matches });
-
-			// STEP 4: derive analysis (axes/grade) + cache embedding
-			const analysis = buildAnalysisFromMatches(matches, {
-				vertexModel: VERTEX_MODEL,
-				embeddingDim: embedding.length,
-				gcsUri,
-				topMatch: matches[0] ?? null,
-				// TODO(D12): if shouldEscalateToJudge(matches) → llm_as_judge path
-			});
-
-			await this.cacheEvaluationEmbedding(
-				req.evaluationId,
+			// STEP 3: pgvector cosine search vs academy reference set — per part
+			const partMatches = await this.cosineSearchAllParts(
+				partEmbeddings,
 				req.academyId,
-				embedding,
+			);
+			const allMatches = [
+				...partMatches[1],
+				...partMatches[2],
+				...partMatches[3],
+			].sort((a, b) => b.cosineScore - a.cosineScore);
+			onProgress({ step: "matches_computed", matches: allMatches.slice(0, 5) });
+
+			// STEP 4: derive analysis + cache 3 evaluation embeddings
+			const analysis = buildAnalysisFromPartMatches(partMatches, {
+				vertexModel: VERTEX_MODEL,
+				embeddingDim: EMBEDDING_DIMENSION,
+				gcsUri,
+				partWindows: PART_WINDOWS,
+				// TODO(D12): if shouldEscalateToJudge per-part → llm_as_judge path
+			});
+
+			await Promise.all(
+				partEmbeddings.map((pe) =>
+					this.cacheEvaluationEmbedding(
+						req.evaluationId,
+						req.academyId,
+						pe.embedding,
+						pe.partIndex,
+					),
+				),
 			);
 
 			return analysis;
@@ -166,7 +210,10 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 		});
 	}
 
-	private async callVertexEmbedding(gcsUri: string): Promise<number[]> {
+	private async callVertexEmbedding(
+		gcsUri: string,
+		window: PartWindow,
+	): Promise<number[]> {
 		const token = await this.getAccessToken();
 		const url =
 			`https://${this.deps.location}-aiplatform.googleapis.com/v1/projects/` +
@@ -176,7 +223,10 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 				{
 					video: {
 						gcsUri,
-						videoSegmentConfig: { startOffsetSec: 0, endOffsetSec: 120 },
+						videoSegmentConfig: {
+							startOffsetSec: window.startOffsetSec,
+							endOffsetSec: window.endOffsetSec,
+						},
 					},
 				},
 			],
@@ -192,7 +242,7 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 		});
 		if (!res.ok) {
 			throw new Error(
-				`vertex_predict_failed: ${res.status} ${await res.text()}`,
+				`vertex_predict_failed(part${window.partIndex}): ${res.status} ${await res.text()}`,
 			);
 		}
 		const data = (await res.json()) as VertexPredictResponse;
@@ -202,7 +252,7 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 			segment.embedding.length !== EMBEDDING_DIMENSION
 		) {
 			throw new Error(
-				`vertex_embedding_shape_unexpected: got ${
+				`vertex_embedding_shape_unexpected(part${window.partIndex}): got ${
 					segment?.embedding?.length ?? 0
 				} dims`,
 			);
@@ -210,16 +260,43 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 		return segment.embedding;
 	}
 
-	private async cosineSearch(
+	private async cosineSearchAllParts(
+		partEmbeddings: PartEmbedding[],
+		academyId: string,
+	): Promise<PartMatchesByPart> {
+		const entries = await Promise.all(
+			partEmbeddings.map(
+				async (pe) =>
+					[
+						pe.partIndex,
+						await this.cosineSearchByPart(
+							pe.embedding,
+							academyId,
+							pe.partIndex,
+						),
+					] as const,
+			),
+		);
+		const byPart = Object.fromEntries(entries) as PartMatchesByPart;
+		return {
+			1: byPart[1] ?? [],
+			2: byPart[2] ?? [],
+			3: byPart[3] ?? [],
+		};
+	}
+
+	private async cosineSearchByPart(
 		vector: number[],
 		academyId: string,
+		partIndex: PartIndex,
 	): Promise<ReferenceMatch[]> {
 		const vectorLiteral = `[${vector.join(",")}]`;
 		const rows = await this.deps.db.execute<CosineMatchRow>(
 			sql`SELECT reference_video_id, tier, scene_type, cosine_similarity
-			    FROM search_reference_matches(
+			    FROM search_reference_matches_by_part(
 			      ${vectorLiteral}::vector,
 			      ${academyId}::uuid,
+			      ${partIndex}::smallint,
 			      5
 			    )`,
 		);
@@ -228,6 +305,7 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 			tier: r.tier as "A" | "B" | "C" | "D",
 			sceneType: r.scene_type,
 			cosineScore: Number(r.cosine_similarity),
+			partIndex,
 		}));
 	}
 
@@ -235,14 +313,20 @@ export class VertexVideoAnalysisService implements VideoAnalysisService {
 		evaluationId: string,
 		academyId: string,
 		vector: number[],
+		partIndex: PartIndex,
 	): Promise<void> {
 		// embeddings 테이블은 schema.ts 에서 type-only (pgvector drizzle helper
-		// 미적용) — raw SQL 사용. ON CONFLICT 는 unique constraint 가 없어 생략;
-		// duplicate insert 는 caller 가 idempotency 책임.
+		// 미적용) — raw SQL 사용. part_index 까지 같이 저장.
 		const vectorLiteral = `[${vector.join(",")}]`;
 		await this.deps.db.execute(
-			sql`INSERT INTO embeddings (academy_id, source_type, source_evaluation_id, vector)
-			    VALUES (${academyId}::uuid, 'evaluation', ${evaluationId}::uuid, ${vectorLiteral}::vector)`,
+			sql`INSERT INTO embeddings (academy_id, source_type, source_evaluation_id, vector, part_index)
+			    VALUES (
+			      ${academyId}::uuid,
+			      'evaluation',
+			      ${evaluationId}::uuid,
+			      ${vectorLiteral}::vector,
+			      ${partIndex}::smallint
+			    )`,
 		);
 	}
 }

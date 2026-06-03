@@ -56,7 +56,7 @@ function makeFakeDb(
 		{
 			reference_video_id: "11111111-1111-4000-8000-000000000001",
 			tier: "A",
-			scene_type: "classical_monologue",
+			scene_type: "modern_monologue",
 			cosine_similarity: "0.91",
 		},
 		{
@@ -71,8 +71,8 @@ function makeFakeDb(
 	return {
 		execute: vi.fn().mockImplementation(async () => {
 			call++;
-			// 1st execute = cosine search (returns rows); 2nd = insert (returns nothing)
-			return call === 1 ? matchRows : [];
+			// 3 RPC calls (cosine search per part) → matchRows; 3 INSERTs → []
+			return call <= 3 ? matchRows : [];
 		}),
 	};
 }
@@ -154,10 +154,14 @@ describe("VertexVideoAnalysisService", () => {
 			"embedding_generated",
 			"matches_computed",
 		]);
+		// All 3 part RPCs return same matchRows; top1 per part = A@0.91 → avg ≈ 9.4 → A
 		expect(analysis.internalGrade).toBe("A");
-		expect(analysis.calibrationMatchScore).toBe(0.91);
+		// calibrationMatchScore = mean of 3 part top1 cosines (all 0.91)
+		expect(analysis.calibrationMatchScore).toBeCloseTo(0.91, 5);
 		expect(analysis.evaluatorUsed).toBe("cosine");
-		expect(analysis.topMatches).toHaveLength(2);
+		// topMatches = union of 3 parts × 2 matches = 6, capped at 5
+		expect(analysis.topMatches).toHaveLength(5);
+		expect(analysis.perPartAnalysis).toHaveLength(3);
 	});
 
 	it("vectorPreview is first 10 dims of the 1408d embedding", async () => {
@@ -180,7 +184,7 @@ describe("VertexVideoAnalysisService", () => {
 		expect(previewEvent.vectorPreview[0]).toBeCloseTo(FAKE_EMBEDDING[0]);
 	});
 
-	it("calls Vertex with gs://<bucket>/<academy>/<eval>.mp4 URI", async () => {
+	it("calls Vertex 3x with 3-part segments + gs:// URI", async () => {
 		const { mock, calls } = makeFetchMock();
 		vi.stubGlobal("fetch", mock);
 		const svc = new VertexVideoAnalysisService(makeDeps());
@@ -192,15 +196,24 @@ describe("VertexVideoAnalysisService", () => {
 			},
 			() => {},
 		);
-		const vertexCall = mock.mock.calls.find(([url]) =>
+		const vertexCalls = mock.mock.calls.filter(([url]) =>
 			String(url).includes("aiplatform.googleapis.com"),
 		);
-		expect(vertexCall).toBeDefined();
-		const body = JSON.parse(String(vertexCall?.[1]?.body));
-		expect(body.instances[0].video.gcsUri).toBe(
+		expect(vertexCalls).toHaveLength(3);
+		const segments = vertexCalls
+			.map(([, init]) => JSON.parse(String(init?.body)))
+			.map((b) => b.instances[0].video.videoSegmentConfig)
+			.sort((a, b) => a.startOffsetSec - b.startOffsetSec);
+		expect(segments).toEqual([
+			{ startOffsetSec: 0, endOffsetSec: 90 },
+			{ startOffsetSec: 90, endOffsetSec: 150 },
+			{ startOffsetSec: 150, endOffsetSec: 270 },
+		]);
+		const firstBody = JSON.parse(String(vertexCalls[0][1]?.body));
+		expect(firstBody.instances[0].video.gcsUri).toBe(
 			"gs://test-bucket/bbbbbbbb-bbbb-4000-8000-000000000bbb/aaaaaaaa-aaaa-4000-8000-000000000aaa.mp4",
 		);
-		expect(body.parameters.dimension).toBe(1408);
+		expect(firstBody.parameters.dimension).toBe(1408);
 		expect(
 			calls.some((c) => c.startsWith("DELETE") && c.includes("storage/v1")),
 		).toBe(true);

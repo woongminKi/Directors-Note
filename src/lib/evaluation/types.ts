@@ -43,11 +43,21 @@ export interface AxisScores {
 	examReadiness: number;
 }
 
+export type PartIndex = 1 | 2 | 3;
+
 export interface ReferenceMatch {
 	referenceVideoId: string;
 	tier: "A" | "B" | "C" | "D";
 	sceneType: string;
 	cosineScore: number;
+	partIndex?: PartIndex;
+}
+
+export interface PartAnalysis {
+	partIndex: PartIndex;
+	topMatch: ReferenceMatch;
+	score: number;
+	matches: ReferenceMatch[];
 }
 
 export interface AIAnalysis {
@@ -57,6 +67,7 @@ export interface AIAnalysis {
 	evaluatorUsed: "cosine" | "llm_as_judge";
 	cosineConfidence?: number;
 	topMatches: ReferenceMatch[];
+	perPartAnalysis?: PartAnalysis[];
 	rawResponseJson: unknown;
 }
 
