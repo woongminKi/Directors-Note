@@ -18,13 +18,26 @@ type Match = {
 	tier: string;
 	sceneType: string;
 	cosineScore: number;
+	partIndex?: 1 | 2 | 3;
+};
+
+type PartAnalysis = {
+	partIndex: 1 | 2 | 3;
+	topMatch: Match;
+	score: number;
 };
 
 const AXES = [
-	{ key: "vocalScore", label: "발성" },
-	{ key: "expressionScore", label: "표정" },
-	{ key: "examReadinessScore", label: "입시 완성도" },
+	{ key: "vocalScore", label: "발성", partIndex: 2 as const },
+	{ key: "expressionScore", label: "표정", partIndex: 1 as const },
+	{ key: "examReadinessScore", label: "입시 완성도", partIndex: 3 as const },
 ] as const;
+
+const PART_LABEL: Record<1 | 2 | 3, string> = {
+	1: "자유 연기 (0-90s)",
+	2: "무용·노래 (90-150s)",
+	3: "압박 면접 (150s~)",
+};
 
 const GRADE_STYLE: Record<string, string> = {
 	A: "bg-green-600 text-white",
@@ -50,11 +63,29 @@ function topMatches(raw: unknown): Match[] {
 	return [];
 }
 
+function perPartAnalysis(raw: unknown): PartAnalysis[] {
+	if (raw && typeof raw === "object" && "perPartAnalysis" in raw) {
+		const p = (raw as { perPartAnalysis?: unknown }).perPartAnalysis;
+		if (Array.isArray(p)) {
+			return p.filter(
+				(x): x is PartAnalysis =>
+					!!x &&
+					typeof x === "object" &&
+					"partIndex" in x &&
+					"topMatch" in x &&
+					"score" in x,
+			);
+		}
+	}
+	return [];
+}
+
 const pct = (v: string | null) =>
 	v != null ? `${Math.round(Number(v) * 100)}%` : null;
 
 export function AnalysisResult({ analysis }: { analysis: AnalysisRow }) {
 	const matches = topMatches(analysis.rawResponseJson);
+	const parts = perPartAnalysis(analysis.rawResponseJson);
 	const evaluatorLabel =
 		analysis.evaluatorUsed === "cosine" ? "코사인 매칭" : "LLM 심사";
 	const calibration = pct(analysis.calibrationMatchScore);
@@ -93,17 +124,37 @@ export function AnalysisResult({ analysis }: { analysis: AnalysisRow }) {
 				{confidence && <span>코사인 신뢰도: {confidence}</span>}
 			</div>
 
+			{parts.length > 0 && (
+				<div className="space-y-1">
+					<p className="text-xs font-medium">파트별 매칭</p>
+					<ul className="space-y-1">
+						{parts.map((p) => (
+							<li key={p.partIndex} className="flex justify-between text-xs">
+								<span>
+									{PART_LABEL[p.partIndex]} · {p.topMatch.tier}급
+								</span>
+								<span className="text-muted-foreground">
+									{p.score.toFixed(1)}/10 · cos{" "}
+									{Math.round(p.topMatch.cosineScore * 100)}%
+								</span>
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+
 			{matches.length > 0 && (
 				<div className="space-y-1">
-					<p className="text-xs font-medium">매칭된 reference</p>
+					<p className="text-xs font-medium">상위 매칭 (전체)</p>
 					<ul className="space-y-1">
-						{matches.slice(0, 3).map((m) => (
+						{matches.slice(0, 5).map((m) => (
 							<li
-								key={m.referenceVideoId ?? `${m.tier}-${m.sceneType}`}
+								key={`${m.referenceVideoId ?? `${m.tier}-${m.sceneType}`}-${m.partIndex ?? "x"}-${m.cosineScore}`}
 								className="flex justify-between text-xs"
 							>
 								<span>
-									{m.tier}급 · {m.sceneType}
+									{m.tier}급{m.partIndex ? ` · part${m.partIndex}` : ""} ·{" "}
+									{m.sceneType}
 								</span>
 								<span className="text-muted-foreground">
 									{Math.round(m.cosineScore * 100)}%
