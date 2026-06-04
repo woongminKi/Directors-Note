@@ -1,5 +1,6 @@
 "use server";
 import { and, eq, isNull } from "drizzle-orm";
+import { assignSubmission } from "@/lib/assignment/actions";
 import { requireConsumer } from "@/lib/auth/require-consumer";
 import { CURRENT_UPLOADER_CONSENT_VERSION } from "@/lib/consent/version";
 import { db } from "@/lib/db/client";
@@ -196,6 +197,15 @@ export async function enqueueSubmission(
 				eq(submissions.uploaderUserId, user.appUser.id),
 			),
 		);
+
+	// WS4 — enqueue 직후 라우팅 트리거(best-effort). 자격 평가자가 없거나 배정
+	// 실패해도 enqueue 는 성공으로 둔다(제출은 queued 로 남고 assignQueued sweep 이
+	// 나중에 픽업). 라우팅 예외가 소비자 제출 플로우를 깨지 않도록 try/catch 로 격리.
+	try {
+		await assignSubmission(submissionId);
+	} catch {
+		// 의도적 무시: 제출은 queued 로 남는다.
+	}
 
 	return { ok: true };
 }
