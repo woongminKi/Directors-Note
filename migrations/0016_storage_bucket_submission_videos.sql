@@ -22,20 +22,18 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = EXCLUDED.allowed_mime_types,
   updated_at = now();
 
--- Uploader isolation — authenticated 클라이언트는 자기 폴더(auth.uid())만.
-DROP POLICY IF EXISTS "submission_videos_uploader_isolation" ON storage.objects;
-CREATE POLICY "submission_videos_uploader_isolation"
-ON storage.objects
-FOR ALL
-TO authenticated
-USING (
-  bucket_id = 'submission-videos'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-)
-WITH CHECK (
-  bucket_id = 'submission-videos'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-);
-
-COMMENT ON POLICY "submission_videos_uploader_isolation" ON storage.objects IS
-  'submission-videos 버킷 uploader(auth.uid()) 폴더 prefix isolation. service_role 은 RLS bypass — 실제 모든 쓰기는 service-role 핸들러 경유 (0009 패턴 일반화).';
+-- ─── Uploader isolation 정책 (storage.objects) ───────────────────────
+-- 주의: 최신 Supabase 는 storage.objects 의 owner 가 supabase_storage_admin 이라
+--   postgres 풀러 연결/대시보드 SQL Editor 에서 CREATE POLICY 시 42501
+--   "must be owner of relation objects" 로 막힌다. 따라서 이 정책은 SQL 마이그
+--   레이션으로 적용 불가 → Supabase 대시보드 Storage → Policies UI 로 생성.
+--
+-- 단, 이 정책은 기능상 필수가 아닌 defense-in-depth: 업로드/다운로드는 전부
+--   service-role 서명 URL(RLS bypass) + 앱 레이어 인가로 처리되므로 authenticated
+--   클라이언트가 storage.objects 에 직접 접근하지 않는다. Phase A 는 없어도 동작.
+--
+-- UI 로 추가할 정책 (bucket: submission-videos, target role: authenticated, FOR ALL):
+--   USING / WITH CHECK:
+--     bucket_id = 'submission-videos'
+--     AND (storage.foldername(name))[1] = auth.uid()::text
+--   → uploader(auth.uid()) 폴더 prefix isolation.
