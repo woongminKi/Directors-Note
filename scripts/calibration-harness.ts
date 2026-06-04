@@ -35,6 +35,7 @@ import {
 	buildAnalysisFromPartMatches,
 	type PartMatchesByPart,
 } from "@/lib/evaluation/grade-derivation";
+import type { GeminiVideoJudge } from "@/lib/evaluation/llm-judge";
 import type {
 	AxisScores,
 	PartIndex,
@@ -209,10 +210,29 @@ function makeCosineLeaveOneOutEvaluator(
 	};
 }
 
-// TODO(Phase1): judgeEvaluator — an Evaluator that sends the held-out video's
-// frames/transcript to the LLM-as-judge and parses back a tier. It plugs into
-// the exact same runCalibration()/measureReproducibility() harness below, so
-// the D13 gate and the metric/printing code stay evaluator-independent.
+// Phase1 judgeEvaluator — an Evaluator that sends the held-out video to the
+// Gemini multimodal LLM-as-judge and parses back a tier + axes. It plugs into
+// the exact same runCalibration()/measureReproducibility() harness, so the D13
+// gate and the metric/printing code stay evaluator-independent.
+//
+// The cosine path keys off DB embeddings (videoId is a reference_videos.id);
+// the judge keys off the raw video file. They share the seam but not the data
+// source, so the judge evaluator takes a videoId→filePath resolver. For the
+// local 6-video flow, scripts/calibration-judge.ts is the primary runner — this
+// factory is the production-shaped seam for when reference rows carry a path.
+export function makeJudgeEvaluator(
+	judge: GeminiVideoJudge,
+	resolveFilePath: (c: CalibrationCase) => string,
+): Evaluator {
+	return async (c) => {
+		const result = await judge.judgeLocalFile(resolveFilePath(c));
+		return {
+			predictedGrade: result.internalGrade,
+			axes: result.axes,
+			detail: result,
+		};
+	};
+}
 
 // ─── harness core (evaluator-independent) ────────────────────────────────────
 
