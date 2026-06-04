@@ -2,7 +2,8 @@ export type EmptyStateVariant =
 	| "eval-todo"
 	| "review-pending"
 	| "sent"
-	| "owner-no-coach";
+	| "owner-no-coach"
+	| "evaluator-queue";
 
 export interface EmptyStateConfig {
 	message: string;
@@ -23,6 +24,9 @@ const CONFIG: Record<EmptyStateVariant, EmptyStateConfig> = {
 	"owner-no-coach": {
 		message: "함께 일할 코치를 초대해 보세요.",
 		cta: { label: "코치 초대", href: "/users/new" },
+	},
+	"evaluator-queue": {
+		message: "배정된 채점이 없습니다. 새 배정이 오면 여기에 표시됩니다.",
 	},
 };
 

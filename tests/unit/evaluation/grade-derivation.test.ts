@@ -60,6 +60,39 @@ describe("deriveGradeFromScores", () => {
 	it("else → D", () => {
 		expect(deriveGradeFromScores([3, 4, 3])).toBe("D");
 	});
+
+	// WS5 — 4축(vocal/expression/movement/examReadiness) 경계.
+	describe("4-axis boundaries (WS5 evaluator scores)", () => {
+		it("avg exactly 7.25 → A", () => {
+			// (7 + 7 + 7 + 8) / 4 = 7.25
+			expect(deriveGradeFromScores([7, 7, 7, 8])).toBe("A");
+		});
+
+		it("just below 7.25 → B", () => {
+			// (7 + 7 + 7 + 7.5) / 4 = 7.125
+			expect(deriveGradeFromScores([7, 7, 7, 7.5])).toBe("B");
+		});
+
+		it("avg exactly 5.75 → B", () => {
+			// (5.5 + 5.5 + 6 + 6) / 4 = 5.75
+			expect(deriveGradeFromScores([5.5, 5.5, 6, 6])).toBe("B");
+		});
+
+		it("just below 5.75 → C", () => {
+			// (5.5 + 5.5 + 6 + 5.5) / 4 = 5.625
+			expect(deriveGradeFromScores([5.5, 5.5, 6, 5.5])).toBe("C");
+		});
+
+		it("avg exactly 4.25 → C", () => {
+			// (4 + 4 + 4.5 + 4.5) / 4 = 4.25
+			expect(deriveGradeFromScores([4, 4, 4.5, 4.5])).toBe("C");
+		});
+
+		it("just below 4.25 → D", () => {
+			// (4 + 4 + 4 + 4.5) / 4 = 4.125
+			expect(deriveGradeFromScores([4, 4, 4, 4.5])).toBe("D");
+		});
+	});
 });
 
 describe("deriveAxesFromPartMatches", () => {
