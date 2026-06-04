@@ -34,8 +34,30 @@ export async function GET(request: Request) {
 	});
 
 	if (!row) {
-		await supabase.auth.signOut();
-		return NextResponse.redirect(new URL("/auth/not-invited", url.origin), 307);
+		// B2B(코치/관리자)는 사전 초대된 row 만 허용. 단 B2C 소비자 인테이크
+		// 플로우(next 가 /submit 로 시작)는 자가 가입이므로, 미존재 시 자동
+		// 프로비저닝한다 — role='consumer', academy_id=null (WS3.6).
+		const isConsumerSignup = next.startsWith("/submit");
+		if (!isConsumerSignup) {
+			await supabase.auth.signOut();
+			return NextResponse.redirect(
+				new URL("/auth/not-invited", url.origin),
+				307,
+			);
+		}
+		const meta = data.user.user_metadata ?? {};
+		const metaName =
+			(typeof meta.name === "string" && meta.name.trim()) ||
+			(typeof meta.full_name === "string" && meta.full_name.trim()) ||
+			null;
+		await db.insert(users).values({
+			id: data.user.id, // = auth.users.id (PK)
+			academyId: null,
+			role: "consumer",
+			email: data.user.email,
+			displayName: metaName,
+		});
+		return NextResponse.redirect(new URL(next, url.origin), 307);
 	}
 
 	// row.id is non-null (PK constraint) and must match auth.users.id.
