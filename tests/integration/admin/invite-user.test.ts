@@ -46,6 +46,10 @@ describe("inviteUser", () => {
 			role: "coach",
 			displayName: null,
 			kakaoId: null,
+			interRaterScore: null,
+			labelsCompleted: 0,
+			onboardedAt: null,
+			evaluatorStatus: null,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		});

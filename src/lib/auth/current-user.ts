@@ -7,15 +7,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AppUser = {
 	id: string;
-	academyId: string;
-	role: "owner" | "coach" | "admin";
+	academyId: string | null;
+	role: "owner" | "coach" | "admin" | "consumer" | "evaluator";
 	email: string;
 };
 
 export type CurrentUser = {
 	authUser: { id: string; email: string };
 	appUser: AppUser;
-	academyId: string;
+	academyId: string | null;
 	role: AppUser["role"];
 };
 
