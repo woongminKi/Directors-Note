@@ -24,11 +24,21 @@ export const env = createEnv({
 		// Vercel Cron 인증 시크릿. Vercel이 cron 호출 시
 		// `Authorization: Bearer ${CRON_SECRET}` 를 자동 첨부한다 (/api/cron/*).
 		CRON_SECRET: z.string().min(1),
+		// 웹 푸시 (D-②). FEATURE_WEB_PUSH=true 일 때만 실제 필요 → optional + 런타임 체크.
+		FEATURE_WEB_PUSH: z.enum(["true", "false"]).default("false"),
+		VAPID_PUBLIC_KEY: z.string().optional(),
+		VAPID_PRIVATE_KEY: z.string().optional(),
+		VAPID_SUBJECT: z.string().optional(),
+		// 카카오 알림톡 (후속 — 현재 stub). 미설정 OK.
+		KAKAO_ALIMTALK_API_KEY: z.string().optional(),
+		KAKAO_ALIMTALK_SENDER_KEY: z.string().optional(),
 	},
 	client: {
 		NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
 		NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
 		NEXT_PUBLIC_APP_URL: z.string().url(),
+		// 클라이언트 푸시 구독용 VAPID 공개키 (FEATURE_WEB_PUSH 시 필요).
+		NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
 	},
 	runtimeEnv: {
 		SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -47,6 +57,13 @@ export const env = createEnv({
 		FEATURE_GUARDIAN_VERIFICATION: process.env.FEATURE_GUARDIAN_VERIFICATION,
 		FEATURE_PAYMENT_ENABLED: process.env.FEATURE_PAYMENT_ENABLED,
 		CRON_SECRET: process.env.CRON_SECRET,
+		FEATURE_WEB_PUSH: process.env.FEATURE_WEB_PUSH,
+		VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+		VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+		VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+		KAKAO_ALIMTALK_API_KEY: process.env.KAKAO_ALIMTALK_API_KEY,
+		KAKAO_ALIMTALK_SENDER_KEY: process.env.KAKAO_ALIMTALK_SENDER_KEY,
+		NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
 		NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
 		NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 		NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
