@@ -21,6 +21,9 @@ export const env = createEnv({
 		// WS7 결제 게이트. false(default) 면 stub — paid_at 즉시 스탬프(무료 파일럿).
 		// true 면 한국 PG(Toss/카카오페이 — 미결) webhook 으로 스탬프(Phase A 미구현).
 		FEATURE_PAYMENT_ENABLED: z.enum(["true", "false"]).default("false"),
+		// Vercel Cron 인증 시크릿. Vercel이 cron 호출 시
+		// `Authorization: Bearer ${CRON_SECRET}` 를 자동 첨부한다 (/api/cron/*).
+		CRON_SECRET: z.string().min(1),
 	},
 	client: {
 		NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -43,6 +46,7 @@ export const env = createEnv({
 		FEATURE_B2C_INTAKE_OPEN: process.env.FEATURE_B2C_INTAKE_OPEN,
 		FEATURE_GUARDIAN_VERIFICATION: process.env.FEATURE_GUARDIAN_VERIFICATION,
 		FEATURE_PAYMENT_ENABLED: process.env.FEATURE_PAYMENT_ENABLED,
+		CRON_SECRET: process.env.CRON_SECRET,
 		NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
 		NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 		NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
