@@ -26,6 +26,7 @@ import {
 } from "@/lib/assignment/select-evaluator";
 import { db } from "@/lib/db/client";
 import { evaluationAssignments, submissions, users } from "@/lib/db/schema";
+import { notify } from "@/lib/notifications/actions";
 
 export type AssignResult =
 	| {
@@ -209,6 +210,13 @@ export async function assignSubmission(
 				dueAt,
 			);
 			if (!claimed) continue; // 다음 후보 재시도.
+
+			// primary 배정 확정 → 평가자에게 알림(redundant 라벨은 알림 없음).
+			await notify({
+				userId: evaluatorId,
+				type: "evaluator_assigned",
+				submissionId,
+			});
 
 			// primary 확보. 이중라벨(QA) 샘플링 — 다른 평가자에게 비차단 2차 배정.
 			let redundantEvaluatorId: string | undefined;

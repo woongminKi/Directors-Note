@@ -31,6 +31,7 @@ import {
 	type EvaluatorScoreFormInput,
 	evaluatorScoreFormSchema,
 } from "@/lib/forms/evaluator-score-form";
+import { notify } from "@/lib/notifications/actions";
 
 export type ScoreSubmitResult =
 	| { ok: true; redirectTo: string; derivedGrade: "A" | "B" | "C" | "D" }
@@ -139,6 +140,21 @@ export async function submitEvaluatorScore(
 			error: "failed",
 			details: e instanceof Error ? e.message : "score_submit_failed",
 		};
+	}
+
+	// primary 채점 완료 → submissions 가 scored 로 전이. uploader 에게 알림.
+	if (isPrimary) {
+		const sub = await db.query.submissions.findFirst({
+			where: eq(submissions.id, submissionId),
+			columns: { uploaderUserId: true },
+		});
+		if (sub) {
+			await notify({
+				userId: sub.uploaderUserId,
+				type: "submission_scored",
+				submissionId,
+			});
+		}
 	}
 
 	return { ok: true, redirectTo: "/queue", derivedGrade };

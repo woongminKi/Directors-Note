@@ -24,6 +24,7 @@ import {
 	labeledResults,
 	submissions,
 } from "@/lib/db/schema";
+import { notify } from "@/lib/notifications/actions";
 import { checkReleaseGate } from "@/lib/submissions/release";
 
 export type ReleaseResult =
@@ -119,6 +120,13 @@ export async function releaseSubmission(
 			details: e instanceof Error ? e.message : "release_failed",
 		};
 	}
+
+	// 결과 공개 → uploader(소비자) 알림. notify 는 실패해도 release 를 깨지 않음.
+	await notify({
+		userId: submission.uploaderUserId,
+		type: "submission_released",
+		submissionId,
+	});
 
 	return { ok: true, alreadyReleased: false };
 }
