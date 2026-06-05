@@ -25,6 +25,7 @@ import {
 	submissions,
 } from "@/lib/db/schema";
 import { notify } from "@/lib/notifications/actions";
+import { accrueEarning } from "@/lib/settlement/actions";
 import { checkReleaseGate } from "@/lib/submissions/release";
 
 export type ReleaseResult =
@@ -69,12 +70,16 @@ export async function releaseSubmission(
 		return { ok: true, alreadyReleased: true };
 	}
 
+	let primaryEvaluatorId: string | null = null;
 	try {
 		await db.transaction(async (tx) => {
 			// (1) primary 라벨 식별: is_redundant_label=false 배정에 대응하는 라벨.
 			//     라벨은 (submission, evaluator) 유니크이므로 배정 join 으로 1행 해결.
 			const primaryLabel = await tx
-				.select({ id: labeledResults.id })
+				.select({
+					id: labeledResults.id,
+					evaluatorUserId: labeledResults.evaluatorUserId,
+				})
 				.from(labeledResults)
 				.innerJoin(
 					evaluationAssignments,
@@ -107,6 +112,7 @@ export async function releaseSubmission(
 
 			// (3) primary 라벨에만 is_primary=true (redundant 라벨은 건드리지 않음).
 			if (primaryLabel[0]) {
+				primaryEvaluatorId = primaryLabel[0].evaluatorUserId;
 				await tx
 					.update(labeledResults)
 					.set({ isPrimary: true })
@@ -127,6 +133,18 @@ export async function releaseSubmission(
 		type: "submission_released",
 		submissionId,
 	});
+
+	// 정산 적립 — primary 평가자에게 수익 적립. 실패해도 release 를 깨지 않음.
+	if (primaryEvaluatorId) {
+		try {
+			await accrueEarning({
+				submissionId,
+				evaluatorUserId: primaryEvaluatorId,
+			});
+		} catch (e) {
+			console.error("[release] accrueEarning failed", e);
+		}
+	}
 
 	return { ok: true, alreadyReleased: false };
 }

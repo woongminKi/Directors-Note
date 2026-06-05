@@ -11,6 +11,7 @@ import {
 	createPaymentProvider,
 	isKakaoPayEnabled,
 } from "@/lib/payments/factory";
+import { voidEarningsForSubmission } from "@/lib/settlement/actions";
 import { releaseSubmission } from "@/lib/submissions/release-action";
 
 export type PayReadyResult =
@@ -193,6 +194,13 @@ export async function refundOrder(orderId: string): Promise<RefundResult> {
 				eq(submissions.status, "released"),
 			),
 		);
+
+	// 정산 void — 환불된 건은 지급 대상 아님. 실패해도 환불을 깨지 않음.
+	try {
+		await voidEarningsForSubmission(order.submissionId);
+	} catch (e) {
+		console.error("[refund] voidEarningsForSubmission failed", e);
+	}
 
 	return { ok: true };
 }
