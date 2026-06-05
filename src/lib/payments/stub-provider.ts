@@ -1,5 +1,6 @@
 import type {
 	ApproveResult,
+	CancelResult,
 	PaymentOrderRow,
 	PaymentProvider,
 	ReadyContext,
@@ -23,6 +24,9 @@ export class StubPaymentProvider implements PaymentProvider {
 		_order: PaymentOrderRow,
 		_pgToken: string,
 	): Promise<ApproveResult> {
+		return { ok: true };
+	}
+	async cancel(_order: PaymentOrderRow): Promise<CancelResult> {
 		return { ok: true };
 	}
 }

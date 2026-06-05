@@ -25,7 +25,10 @@ export type ReadyResult =
 
 export type ApproveResult = { ok: true } | { ok: false; error: string };
 
+export type CancelResult = { ok: true } | { ok: false; error: string };
+
 export interface PaymentProvider {
 	ready(order: PaymentOrderRow, ctx: ReadyContext): Promise<ReadyResult>;
 	approve(order: PaymentOrderRow, pgToken: string): Promise<ApproveResult>;
+	cancel(order: PaymentOrderRow): Promise<CancelResult>;
 }

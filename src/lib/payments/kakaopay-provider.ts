@@ -1,6 +1,7 @@
 import { env } from "@/lib/env";
 import type {
 	ApproveResult,
+	CancelResult,
 	PaymentOrderRow,
 	PaymentProvider,
 	ReadyContext,
@@ -80,6 +81,29 @@ export class KakaoPayProvider implements PaymentProvider {
 			return {
 				ok: false,
 				error: e instanceof Error ? e.message : "approve_failed",
+			};
+		}
+	}
+
+	async cancel(order: PaymentOrderRow): Promise<CancelResult> {
+		if (!order.providerTid) return { ok: false, error: "missing_tid" };
+		try {
+			const res = await fetch(`${BASE}/cancel`, {
+				method: "POST",
+				headers: authHeaders(),
+				body: JSON.stringify({
+					cid: CID(),
+					tid: order.providerTid,
+					cancel_amount: order.amount,
+					cancel_tax_free_amount: 0,
+				}),
+			});
+			if (!res.ok) return { ok: false, error: `cancel_http_${res.status}` };
+			return { ok: true };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "cancel_failed",
 			};
 		}
 	}
