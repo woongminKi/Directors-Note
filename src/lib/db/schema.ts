@@ -431,6 +431,43 @@ export const notifications = pgTable(
 	],
 );
 
+// ─── payment_orders (소비자 결제 주문/거래 — 0020) ─────────────────
+export const paymentOrders = pgTable(
+	"payment_orders",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		submissionId: uuid("submission_id")
+			.notNull()
+			.references(() => submissions.id, { onDelete: "cascade" }),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "restrict" }),
+		amount: integer("amount").notNull(),
+		provider: text("provider").$type<"kakaopay" | "stub">().notNull(),
+		providerTid: text("provider_tid"),
+		status: text("status")
+			.$type<"ready" | "approved" | "canceled" | "failed">()
+			.notNull()
+			.default("ready"),
+		approvedAt: timestamp("approved_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [
+		check(
+			"payment_orders_provider_enum",
+			sql`${t.provider} IN ('kakaopay','stub')`,
+		),
+		check(
+			"payment_orders_status_enum",
+			sql`${t.status} IN ('ready','approved','canceled','failed')`,
+		),
+		index("idx_payment_orders_submission").on(t.submissionId),
+		index("idx_payment_orders_status").on(t.status),
+	],
+);
+
 // ─── embeddings (pgvector) ─────────────────────────────────────────
 // vector(1408) 은 drizzle-orm 의 vector helper 또는 custom type 으로 표현.
 // 실제 DDL 은 0001_init.sql 의 vector(1408) 사용.
