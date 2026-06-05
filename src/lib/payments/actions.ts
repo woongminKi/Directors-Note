@@ -1,6 +1,7 @@
 "use server";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { requireConsumer } from "@/lib/auth/require-consumer";
 import { db } from "@/lib/db/client";
 import { paymentOrders, submissions } from "@/lib/db/schema";
@@ -135,4 +136,86 @@ export async function approveOrder(
 	await releaseSubmission(order.submissionId);
 
 	return { ok: true, submissionId: order.submissionId };
+}
+
+export type RefundResult =
+	| { ok: true }
+	| {
+			ok: false;
+			error: "forbidden" | "not_found" | "not_refundable" | "cancel_failed";
+	  };
+
+// 관리자(CS) 전액 환불. approved 주문만. 성공 시 결과 재잠금(paid_at 해제 + released→scored).
+export async function refundOrder(orderId: string): Promise<RefundResult> {
+	const user = await getCurrentUser();
+	if (
+		!user ||
+		(user.appUser.role !== "admin" && user.appUser.role !== "owner")
+	) {
+		return { ok: false, error: "forbidden" };
+	}
+
+	const order = await db.query.paymentOrders.findFirst({
+		where: eq(paymentOrders.id, orderId),
+	});
+	if (!order) return { ok: false, error: "not_found" };
+	if (order.status === "canceled") return { ok: true }; // 멱등
+	if (order.status !== "approved")
+		return { ok: false, error: "not_refundable" };
+
+	const res = await createPaymentProvider().cancel({
+		id: order.id,
+		submissionId: order.submissionId,
+		userId: order.userId,
+		amount: order.amount,
+		provider: order.provider,
+		providerTid: order.providerTid,
+		status: order.status,
+	});
+	if (!res.ok) return { ok: false, error: "cancel_failed" };
+
+	await db
+		.update(paymentOrders)
+		.set({ status: "canceled", canceledAt: new Date() })
+		.where(eq(paymentOrders.id, orderId));
+
+	// 재잠금: 결제 해제(항상) + released→scored(되돌림).
+	await db
+		.update(submissions)
+		.set({ paidAt: null, updatedAt: new Date() })
+		.where(eq(submissions.id, order.submissionId));
+	await db
+		.update(submissions)
+		.set({ status: "scored" })
+		.where(
+			and(
+				eq(submissions.id, order.submissionId),
+				eq(submissions.status, "released"),
+			),
+		);
+
+	return { ok: true };
+}
+
+export type RefundableOrder = {
+	id: string;
+	submissionId: string;
+	amount: number;
+	approvedAt: Date | null;
+};
+
+// admin 환불 화면용: 환불 가능(approved) 주문 목록. 시스템 read(직결 db, RLS bypass).
+export async function listRefundableOrders(): Promise<RefundableOrder[]> {
+	const rows = await db
+		.select({
+			id: paymentOrders.id,
+			submissionId: paymentOrders.submissionId,
+			amount: paymentOrders.amount,
+			approvedAt: paymentOrders.approvedAt,
+		})
+		.from(paymentOrders)
+		.where(eq(paymentOrders.status, "approved"))
+		.orderBy(desc(paymentOrders.approvedAt))
+		.limit(100);
+	return rows;
 }
