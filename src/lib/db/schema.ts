@@ -365,6 +365,72 @@ export const labeledResults = pgTable(
 	],
 );
 
+// ─── push_subscriptions (웹푸시 구독 — 0018) ───────────────────────
+export const pushSubscriptions = pgTable(
+	"push_subscriptions",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		endpoint: text("endpoint").notNull(),
+		p256dh: text("p256dh").notNull(),
+		auth: text("auth").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [
+		unique("push_subscriptions_endpoint_unique").on(t.endpoint),
+		index("idx_push_subscriptions_user").on(t.userId),
+	],
+);
+
+// ─── notifications (발송 아웃박스 — 0018) ──────────────────────────
+export const notifications = pgTable(
+	"notifications",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		type: text("type")
+			.$type<
+				"submission_released" | "evaluator_assigned" | "submission_scored"
+			>()
+			.notNull(),
+		channel: text("channel").$type<"web_push" | "alimtalk">().notNull(),
+		title: text("title").notNull(),
+		body: text("body").notNull(),
+		url: text("url").notNull(),
+		status: text("status")
+			.$type<"pending" | "sent" | "failed">()
+			.notNull()
+			.default("pending"),
+		attempts: integer("attempts").notNull().default(0),
+		lastError: text("last_error"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		sentAt: timestamp("sent_at", { withTimezone: true }),
+	},
+	(t) => [
+		check(
+			"notifications_type_enum",
+			sql`${t.type} IN ('submission_released','evaluator_assigned','submission_scored')`,
+		),
+		check(
+			"notifications_channel_enum",
+			sql`${t.channel} IN ('web_push','alimtalk')`,
+		),
+		check(
+			"notifications_status_enum",
+			sql`${t.status} IN ('pending','sent','failed')`,
+		),
+		index("idx_notifications_status").on(t.status),
+	],
+);
+
 // ─── embeddings (pgvector) ─────────────────────────────────────────
 // vector(1408) 은 drizzle-orm 의 vector helper 또는 custom type 으로 표현.
 // 실제 DDL 은 0001_init.sql 의 vector(1408) 사용.
