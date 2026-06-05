@@ -469,6 +469,47 @@ export const paymentOrders = pgTable(
 	],
 );
 
+// ─── evaluator_earnings (정산 원장 — 0023) ─────────────────────────
+export const evaluatorEarnings = pgTable(
+	"evaluator_earnings",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		evaluatorUserId: uuid("evaluator_user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "restrict" }),
+		submissionId: uuid("submission_id")
+			.notNull()
+			.references(() => submissions.id, { onDelete: "cascade" }),
+		paymentOrderId: uuid("payment_order_id").references(
+			() => paymentOrders.id,
+			{ onDelete: "set null" },
+		),
+		amount: integer("amount").notNull(),
+		status: text("status")
+			.$type<"pending" | "void" | "paid">()
+			.notNull()
+			.default("pending"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		voidedAt: timestamp("voided_at", { withTimezone: true }),
+	},
+	(t) => [
+		unique("evaluator_earnings_submission_evaluator_unique").on(
+			t.submissionId,
+			t.evaluatorUserId,
+		),
+		check(
+			"evaluator_earnings_status_enum",
+			sql`${t.status} IN ('pending','void','paid')`,
+		),
+		index("idx_evaluator_earnings_evaluator_status").on(
+			t.evaluatorUserId,
+			t.status,
+		),
+	],
+);
+
 // ─── embeddings (pgvector) ─────────────────────────────────────────
 // vector(1408) 은 drizzle-orm 의 vector helper 또는 custom type 으로 표현.
 // 실제 DDL 은 0001_init.sql 의 vector(1408) 사용.
