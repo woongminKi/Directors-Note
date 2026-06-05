@@ -112,17 +112,21 @@ export async function seedSubmission(
 	return id;
 }
 
-/** Insert an assignment directly (service-role-style write; bypasses RLS). */
+/** Insert an assignment directly (service-role-style write; bypasses RLS).
+ *  overdue=true → due_at 을 과거로(now() - 1h) 세팅해 만료 sweep 대상으로 만든다. */
 export async function seedAssignment(
 	submissionId: string,
 	evaluatorId: string,
 	isRedundant: boolean,
 	status: "assigned" | "submitted" | "expired" | "reassigned" = "assigned",
+	overdue = false,
 ): Promise<string> {
 	const rows = await pg`
 		INSERT INTO evaluation_assignments
 			(submission_id, evaluator_user_id, due_at, status, is_redundant_label)
-		VALUES (${submissionId}, ${evaluatorId}, now() + interval '48 hours', ${status}, ${isRedundant})
+		VALUES (${submissionId}, ${evaluatorId},
+			${overdue ? pg`now() - interval '1 hour'` : pg`now() + interval '48 hours'`},
+			${status}, ${isRedundant})
 		RETURNING id`;
 	return rows[0].id as string;
 }
