@@ -1,4 +1,6 @@
 import { QueueCard } from "@/app/(coach)/dashboard/components/queue-card";
+import { PushOptIn } from "@/components/notifications/push-opt-in";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { getEvaluatorOpenAssignments } from "@/lib/assignment/evaluator-queue";
 import { requireEvaluator } from "@/lib/auth/require-evaluator";
 import { fetchEvaluatorQueueRows } from "./actions";
@@ -15,7 +17,13 @@ export default async function EvaluatorQueuePage() {
 	return (
 		<div className="space-y-4">
 			<div>
-				<h1 className="text-xl font-bold">채점 큐</h1>
+				<div className="flex items-center justify-between gap-2">
+					<h1 className="text-xl font-bold">채점 큐</h1>
+					<div className="flex items-center gap-2">
+						<PushOptIn />
+						<InstallPrompt />
+					</div>
+				</div>
 				<p className="text-sm text-muted-foreground">
 					배정된 영상을 열어 4축 루브릭으로 채점해 주세요.
 				</p>

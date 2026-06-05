@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PushOptIn } from "@/components/notifications/push-opt-in";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { Badge } from "@/components/ui/badge";
 import {
 	Card,
@@ -39,7 +41,13 @@ export default async function SubmissionsListPage() {
 	return (
 		<div className="space-y-6">
 			<header className="space-y-1">
-				<h1 className="text-xl font-bold">내 제출 내역</h1>
+				<div className="flex items-center justify-between gap-2">
+					<h1 className="text-xl font-bold">내 제출 내역</h1>
+					<div className="flex items-center gap-2">
+						<PushOptIn />
+						<InstallPrompt />
+					</div>
+				</div>
 				<p className="text-sm text-muted-foreground">
 					제출한 영상의 평가 진행 상황과 결과를 확인할 수 있습니다.
 				</p>
