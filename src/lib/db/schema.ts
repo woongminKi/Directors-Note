@@ -450,6 +450,7 @@ export const paymentOrders = pgTable(
 			.notNull()
 			.default("ready"),
 		approvedAt: timestamp("approved_at", { withTimezone: true }),
+		canceledAt: timestamp("canceled_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
