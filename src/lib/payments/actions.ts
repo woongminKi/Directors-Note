@@ -14,7 +14,7 @@ import { releaseSubmission } from "@/lib/submissions/release-action";
 
 export type PayReadyResult =
 	| { ok: true; redirectUrl: string }
-	| { ok: false; error: "not_found" | "ready_failed" };
+	| { ok: false; error: "not_found" | "not_payable" | "ready_failed" };
 
 // 결제 시작: 주문 생성 + provider.ready. stub 모드면 곧바로 approveOrder 까지 수행.
 export async function payReady(submissionId: string): Promise<PayReadyResult> {
@@ -26,9 +26,14 @@ export async function payReady(submissionId: string): Promise<PayReadyResult> {
 			eq(submissions.uploaderUserId, user.appUser.id),
 			isNull(submissions.softDeletedAt),
 		),
-		columns: { id: true },
+		columns: { id: true, status: true, paidAt: true },
 	});
 	if (!submission) return { ok: false, error: "not_found" };
+	// 결제 가능 조건: 채점 완료(scored) + 미결제. 그 외(미채점/이미 결제)면 주문 생성 안 함.
+	// (서버액션 직접 호출로 미채점 건 과금/중복 과금되는 구멍을 막는다.)
+	if (submission.status !== "scored" || submission.paidAt !== null) {
+		return { ok: false, error: "not_payable" };
+	}
 
 	const provider = isKakaoPayEnabled() ? "kakaopay" : "stub";
 	const inserted = await db

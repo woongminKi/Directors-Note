@@ -80,4 +80,31 @@ describe.skipIf(skip)("payment actions (stub mode, DB)", () => {
 		const again = await mod.approveOrder(order[0].id, "stub");
 		expect(again.ok).toBe(true);
 	});
+
+	it("미채점(queued) 제출 → not_payable, 주문 미생성", async () => {
+		const consumer = await seed.seedUser(scope, "consumer");
+		currentConsumerId = consumer.id;
+		const submissionId = await seed.seedSubmission(scope, consumer.id, {
+			status: "queued",
+		});
+		const r = await mod.payReady(submissionId);
+		expect(r).toEqual({ ok: false, error: "not_payable" });
+		const orders = await seed.pg`
+			SELECT 1 FROM payment_orders WHERE submission_id = ${submissionId}`;
+		expect(orders.length).toBe(0);
+	});
+
+	it("이미 결제됨 → not_payable, 추가 주문 미생성", async () => {
+		const consumer = await seed.seedUser(scope, "consumer");
+		currentConsumerId = consumer.id;
+		const submissionId = await seed.seedSubmission(scope, consumer.id, {
+			status: "scored",
+			paidAt: true,
+		});
+		const r = await mod.payReady(submissionId);
+		expect(r).toEqual({ ok: false, error: "not_payable" });
+		const orders = await seed.pg`
+			SELECT 1 FROM payment_orders WHERE submission_id = ${submissionId}`;
+		expect(orders.length).toBe(0);
+	});
 });
