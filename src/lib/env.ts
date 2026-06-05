@@ -32,6 +32,9 @@ export const env = createEnv({
 		// 카카오 알림톡 (후속 — 현재 stub). 미설정 OK.
 		KAKAO_ALIMTALK_API_KEY: z.string().optional(),
 		KAKAO_ALIMTALK_SENDER_KEY: z.string().optional(),
+		// 카카오페이 단건결제 (D-③ 소비자 결제). FEATURE_PAYMENT_ENABLED=true 일 때 사용.
+		KAKAO_PAY_SECRET_KEY: z.string().optional(),
+		KAKAO_PAY_CID: z.string().optional(),
 	},
 	client: {
 		NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -63,6 +66,8 @@ export const env = createEnv({
 		VAPID_SUBJECT: process.env.VAPID_SUBJECT,
 		KAKAO_ALIMTALK_API_KEY: process.env.KAKAO_ALIMTALK_API_KEY,
 		KAKAO_ALIMTALK_SENDER_KEY: process.env.KAKAO_ALIMTALK_SENDER_KEY,
+		KAKAO_PAY_SECRET_KEY: process.env.KAKAO_PAY_SECRET_KEY,
+		KAKAO_PAY_CID: process.env.KAKAO_PAY_CID,
 		NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
 		NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
 		NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
