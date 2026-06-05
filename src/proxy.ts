@@ -34,6 +34,9 @@ export async function proxy(request: NextRequest) {
 		pathname.startsWith("/parent-consent") ||
 		pathname.startsWith("/_next") ||
 		pathname.startsWith("/api/auth") ||
+		// cron 엔드포인트는 자체 CRON_SECRET bearer 인증을 수행하므로 세션 인증을
+		// 면제한다. 빼지 않으면 세션 없는 Vercel cron 호출이 /login 으로 307 됨.
+		pathname.startsWith("/api/cron") ||
 		pathname.startsWith("/fonts") ||
 		pathname.startsWith("/favicon");
 
